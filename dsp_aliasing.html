@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サンプリング定理とエイリアシング</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0c4a6e,#0369a1,#38bdf8);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:760px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1.5px solid #7dd3fc;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#0c4a6e;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem;padding:0.1em 0.6em;border-radius:7px;min-width:5.2em;text-align:center;color:#0369a1;background:#fff;border:1.5px solid #7dd3fc;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;
+  background:linear-gradient(90deg,#86efac 0%,#86efac 41.67%,#fca5a5 41.67%,#fca5a5 100%);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#0369a1;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#0369a1;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.range-legend{display:flex;gap:1rem;font-size:0.72rem;margin-top:0.35rem;}
+.range-legend .sw{width:16px;height:9px;border-radius:3px;display:inline-block;margin-right:0.25rem;vertical-align:middle;}
+.verdict{border-radius:var(--r);padding:0.7rem 1rem;font-size:0.92rem;font-weight:700;margin-top:0.6rem;line-height:1.7;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1.5px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1.5px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;}
+.big-num{font-family:'JetBrains Mono',monospace;font-size:1.15rem;}
+.chart-wrap{position:relative;height:235px;}
+.chart-wrap.sm{height:150px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.dot{height:9px;width:9px;border-radius:50%;}
+.sw.dash{height:0;border-top:2px dashed;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.33rem 0.45rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.66rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#faxis{display:block;width:100%;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.5em 1.1em;border:none;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#0369a1;color:#fff;}
+.btn-a{background:var(--purple);color:#fff;}
+.btn-s{background:var(--green);color:#fff;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.9;color:var(--text);font-size:0.82rem;}
+.insight{background:linear-gradient(135deg,#ecfeff,#cffafe);border:1px solid #67e8f9;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#164e63;}
+.insight strong{color:#0e7490;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.audio-note{font-size:0.74rem;color:var(--text2);margin-top:0.35rem;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>サンプリング定理とエイリアシング</h1>
+  <p>サンプリング周波数は 100 Hz に固定。信号の周波数だけを変えて、何が起きるかを見る・聴く</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">信号の周波数 f</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-f" min="1" max="120" step="0.5" value="20">
+      <span class="ctrl-val" id="val-f">20.0</span>
+      <span style="font-weight:700;color:#0c4a6e;">Hz</span>
+    </div>
+    <div class="range-scale"><span>1</span><span>25</span><span>50</span><span>75</span><span>100</span><span>120</span></div>
+    <div class="range-legend">
+      <span><span class="sw" style="background:#86efac;"></span>f ≤ 50 Hz：正しく復元できる</span>
+      <span><span class="sw" style="background:#fca5a5;"></span>f &gt; 50 Hz：エイリアシング発生</span>
+    </div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setF(20)">f = 20 Hz</button>
+      <button class="btn-sm" onclick="setF(45)">f = 45 Hz（限界手前）</button>
+      <button class="btn-sm" onclick="setF(50)">f = 50 Hz（ナイキスト）</button>
+      <button class="btn-sm" onclick="setF(70)">f = 70 Hz（→30 Hz に化ける）</button>
+      <button class="btn-sm" onclick="setF(100)">f = 100 Hz（→直流）</button>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <!-- TIME DOMAIN -->
+  <div class="card">
+    <div class="card-label" style="color:#0369a1;">時間波形：元の信号・サンプル点・復元される信号</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#94a3b8;"></span>元の信号（連続）</span>
+      <span class="legend-item"><span class="sw dot" style="background:#dc2626;"></span>サンプル点（100 Hz）</span>
+      <span class="legend-item"><span class="sw" style="background:#0369a1;"></span>サンプル点から見える信号</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-t"></canvas></div>
+    <div class="note" id="t-note"></div>
+  </div>
+
+  <!-- FREQUENCY AXIS -->
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">周波数軸上の折り返し</div>
+    <div class="canvas-wrap"><canvas id="faxis"></canvas></div>
+    <div class="note">ナイキスト周波数 50 Hz を鏡として、信号の周波数が折り返されます。</div>
+  </div>
+
+  <!-- NUMBERS -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">数値</div>
+    <table class="info-table">
+      <tr><th>項目</th><th style="text-align:right;">値</th></tr>
+      <tr><td>サンプリング周波数 f<sub>s</sub></td><td class="num">100.0 Hz（固定）</td></tr>
+      <tr><td>ナイキスト周波数 f<sub>s</sub>/2</td><td class="num">50.0 Hz</td></tr>
+      <tr><td>信号の周波数 f</td><td class="num" id="r-f">—</td></tr>
+      <tr><td>1周期あたりのサンプル点数 f<sub>s</sub>/f</td><td class="num" id="r-ppc">—</td></tr>
+      <tr><td><strong>観測される見かけの周波数</strong></td><td class="num" id="r-fa" style="font-size:1.05rem;">—</td></tr>
+    </table>
+    <div class="eq" style="margin-top:0.5rem;" id="calc-box"></div>
+  </div>
+
+  <!-- AUDIO -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">音で聴く</div>
+    <div class="btn-row">
+      <button class="btn btn-s" id="b-orig">▶ 元の信号の音（f Hz）</button>
+      <button class="btn btn-a" id="b-alias">▶ サンプリング後の音（見かけの周波数）</button>
+      <button class="btn" id="b-stop">■ 停止</button>
+    </div>
+    <div class="audio-note" id="audio-note">
+      実際の周波数は低すぎて聞こえないため、<strong>20倍にして再生</strong>します（f=20Hz → 400Hz の音）。
+      f を 50 Hz より上げていくと、元の音は高くなり続けるのに、サンプリング後の音は<strong>逆に低くなっていく</strong>のが聴き取れます。
+    </div>
+  </div>
+
+  <!-- SWEEP -->
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">見かけの周波数の全体像</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#ea580c;"></span>観測される周波数</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>f（折り返しがない場合）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>現在の f</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-sweep"></canvas></div>
+    <div class="note">f が 50 Hz を超えると山を折り返すように下がり、100 Hz で 0 に戻ります。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・<strong>サンプリング定理</strong>：信号を正しく復元するには f<sub>s</sub> &gt; 2f、つまり信号の最大周波数の<strong>2倍より速く</strong>サンプリングする必要がある<br>
+    ・f &gt; f<sub>s</sub>/2 だと、サンプル点の並びが<strong>低い周波数の正弦波と見分けがつかなくなる</strong>（エイリアシング）<br>
+    ・見かけの周波数は f<sub>s</sub>/2 を折り返し点として <strong>|f − n·f<sub>s</sub>| の最小値</strong>で決まる<br>
+    ・f = f<sub>s</sub> ちょうどでは毎周期同じ位相でサンプルするため、<strong>直流に見える</strong><br>
+    ・実際のA/D変換では、これを防ぐために入力前に<strong>アンチエイリアシング・フィルタ</strong>（低域通過）を必ず入れる<br>
+    ・身近な例：扇風機やタイヤが逆回転して見える現象（動画のフレームレートによるエイリアシング）
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — サンプリング定理とエイリアシング</div>
+
+<script>
+(function(){
+  const FS=100.0;              // サンプリング周波数（固定）
+  const NY=FS/2;               // ナイキスト周波数
+  const slF=document.getElementById('sl-f');
+  const cvF=document.getElementById('faxis'), cf=cvF.getContext('2d');
+
+  function nf(v,n){
+    n=(n===undefined)?1:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  window.setF=function(v){slF.value=v;render();};
+
+  // 見かけの周波数
+  function aliasFreq(f){
+    let fa=f%FS;
+    if(fa>NY)fa=FS-fa;
+    return fa;
+  }
+  // 見かけの信号の符号（折り返し時は位相反転）
+  function aliasSign(f){
+    const m=f%FS;
+    return (m>NY)?-1:1;
+  }
+
+  function ds(color,w,dash,pr){
+    return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,
+      borderDash:dash||[],pointRadius:(pr===undefined?0:pr),fill:false,tension:0.0};
+  }
+  function mkChart(id,xTitle,yTitle,xmin,xmax){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:xmin,max:xmax,title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const TMAX=0.2;   // 0.2 s = 20 サンプル
+  const chT=mkChart('chart-t','時間 t [s]','振幅',0,TMAX);
+  const chS=mkChart('chart-sweep','信号の周波数 f [Hz]','見かけの周波数 [Hz]',0,120);
+
+  // ---- frequency axis drawing ----
+  function resizeF(){
+    const r=cvF.parentElement.getBoundingClientRect();
+    cvF.width=r.width; cvF.height=150;
+  }
+  resizeF(); window.addEventListener('resize',function(){resizeF();render();});
+
+  function drawFaxis(f,fa){
+    const W=cvF.width,H=cvF.height;
+    cf.clearRect(0,0,W,H);
+    cf.fillStyle='#fafaf8';cf.fillRect(0,0,W,H);
+    const L=50, R=W-30, y0=H-42;
+    const FMAX=120;
+    function X(hz){return L+(R-L)*hz/FMAX;}
+    // 安全域 / 折り返し域
+    cf.fillStyle='rgba(134,239,172,0.35)';
+    cf.fillRect(X(0),y0-72,X(NY)-X(0),72);
+    cf.fillStyle='rgba(252,165,165,0.30)';
+    cf.fillRect(X(NY),y0-72,X(FMAX)-X(NY),72);
+    // 軸
+    cf.strokeStyle='#334155';cf.lineWidth=2;
+    cf.beginPath();cf.moveTo(L,y0);cf.lineTo(R,y0);cf.stroke();
+    cf.fillStyle='#64748b';cf.font="10px 'JetBrains Mono'";cf.textAlign='center';
+    for(let hz=0;hz<=FMAX;hz+=20){
+      cf.beginPath();cf.moveTo(X(hz),y0);cf.lineTo(X(hz),y0+5);cf.stroke();
+      cf.fillText(hz,X(hz),y0+17);
+    }
+    cf.fillStyle='#475569';cf.font="10px 'Noto Sans JP'";cf.textAlign='left';
+    cf.fillText('周波数 [Hz]',R-62,y0+32);
+    // ナイキスト（鏡）
+    cf.strokeStyle='#7c3aed';cf.lineWidth=2.4;cf.setLineDash([6,4]);
+    cf.beginPath();cf.moveTo(X(NY),y0-78);cf.lineTo(X(NY),y0+2);cf.stroke();cf.setLineDash([]);
+    cf.fillStyle='#6b21a8';cf.font="bold 10px 'Noto Sans JP'";cf.textAlign='center';
+    cf.fillText('ナイキスト 50Hz（鏡）',X(NY),y0-84);
+    // fs
+    cf.strokeStyle='#94a3b8';cf.lineWidth=1.6;cf.setLineDash([4,3]);
+    cf.beginPath();cf.moveTo(X(FS),y0-56);cf.lineTo(X(FS),y0+2);cf.stroke();cf.setLineDash([]);
+    cf.fillStyle='#64748b';cf.font="10px 'Noto Sans JP'";
+    cf.fillText('fs=100Hz',X(FS),y0-61);
+    // 元の周波数
+    const xf=X(Math.min(f,FMAX));
+    cf.fillStyle='#64748b';
+    cf.beginPath();cf.moveTo(xf,y0);cf.lineTo(xf-5,y0-22);cf.lineTo(xf+5,y0-22);cf.closePath();cf.fill();
+    cf.fillStyle='#334155';cf.font="bold 11px 'JetBrains Mono'";
+    cf.fillText('f='+nf(f,1),xf,y0-27);
+    // 折り返しの矢印
+    const xa=X(fa);
+    if(f>NY){
+      cf.strokeStyle='#dc2626';cf.lineWidth=2;
+      cf.beginPath();
+      const midY=y0-50;
+      cf.moveTo(xf,y0-22);
+      cf.quadraticCurveTo((xf+xa)/2,midY-18,xa,y0-22);
+      cf.stroke();
+      // 矢印頭
+      cf.fillStyle='#dc2626';
+      cf.beginPath();cf.moveTo(xa,y0-22);cf.lineTo(xa+7,y0-32);cf.lineTo(xa-7,y0-32);cf.closePath();cf.fill();
+    }
+    // 見かけの周波数
+    cf.fillStyle='#dc2626';
+    cf.beginPath();cf.arc(xa,y0,6.5,0,2*Math.PI);cf.fill();
+    cf.strokeStyle='#fff';cf.lineWidth=1.6;
+    cf.beginPath();cf.arc(xa,y0,6.5,0,2*Math.PI);cf.stroke();
+    cf.fillStyle='#991b1b';cf.font="bold 11px 'JetBrains Mono'";
+    cf.fillText(nf(fa,1)+'Hz',xa,y0+34);
+  }
+
+  // ---- audio ----
+  let actx=null, osc=null, gain=null;
+  const AUDIO_MULT=20;
+  function playTone(hz){
+    stopTone();
+    try{
+      if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();
+      if(actx.state==='suspended')actx.resume();
+      osc=actx.createOscillator(); gain=actx.createGain();
+      osc.type='sine';
+      const fhz=Math.max(1,hz*AUDIO_MULT);
+      osc.frequency.setValueAtTime(fhz,actx.currentTime);
+      gain.gain.setValueAtTime(0.0001,actx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18,actx.currentTime+0.03);
+      osc.connect(gain);gain.connect(actx.destination);
+      osc.start();
+      osc.stop(actx.currentTime+1.6);
+      osc.onended=function(){osc=null;};
+    }catch(e){
+      document.getElementById('audio-note').textContent='この環境では音を再生できません。波形とグラフでご確認ください。';
+    }
+  }
+  function stopTone(){
+    try{ if(osc){osc.stop();osc=null;} }catch(e){}
+  }
+
+  function render(){
+    const f=parseFloat(slF.value);
+    const fa=aliasFreq(f);
+    const sg=aliasSign(f);
+    document.getElementById('val-f').textContent=nf(f,1);
+    document.getElementById('r-f').textContent=nf(f,1)+' Hz';
+    document.getElementById('r-ppc').textContent=nf(FS/f,2)+' 点 / 周期';
+    document.getElementById('r-fa').textContent=nf(fa,1)+' Hz';
+
+    // 判定
+    const v=document.getElementById('verdict');
+    if(f<NY-1e-9){
+      v.className='verdict ok';
+      v.innerHTML='✓ <strong>正しくサンプリングできています</strong>　f = '+nf(f,1)+' Hz &lt; 50 Hz（ナイキスト周波数）。'+
+        'サンプル点から元の信号を復元できます。';
+    }else if(Math.abs(f-NY)<1e-9){
+      v.className='verdict warn';
+      v.innerHTML='△ <strong>ちょうどナイキスト周波数</strong>　1周期に 2 点しかサンプルできず、'+
+        '位相によっては振幅が正しく取れません。定理は f<sub>s</sub> &gt; 2f（等号を含まない）です。';
+    }else if(Math.abs(f-FS)<1e-9){
+      v.className='verdict ng';
+      v.innerHTML='✗ <strong>直流に見えます</strong>　f = f<sub>s</sub> なので毎回同じ位相でサンプルしてしまい、'+
+        '信号が止まって（0 Hz に）見えます。';
+    }else{
+      v.className='verdict ng';
+      v.innerHTML='✗ <strong>エイリアシング発生</strong>　f = '+nf(f,1)+' Hz の信号が、'+
+        '<span class="big-num">'+nf(fa,1)+' Hz</span> の信号として観測されます'+
+        (sg<0?'（位相は反転）':'')+'。もはや元の信号は復元できません。';
+    }
+
+    // 計算式
+    let cb;
+    if(f<=NY){
+      cb='f = '+nf(f,1)+' Hz ≤ 50 Hz　→　折り返しなし。見かけの周波数 = '+nf(f,1)+' Hz';
+    }else{
+      const n=Math.round(f/FS);
+      cb='f = '+nf(f,1)+' Hz &gt; 50 Hz<br>'+
+         '見かけの周波数 = | f − n·f<sub>s</sub> | の最小値<br>'+
+         '　= | '+nf(f,1)+' − '+n+'×100 | = <strong>'+nf(fa,1)+' Hz</strong>';
+    }
+    document.getElementById('calc-box').innerHTML=cb;
+
+    // --- time domain ---
+    const orig=[],samp=[],recon=[];
+    const NP=1200;
+    for(let i=0;i<=NP;i++){
+      const t=i/NP*TMAX;
+      orig.push({x:t,y:Math.sin(2*Math.PI*f*t)});
+      recon.push({x:t,y:sg*Math.sin(2*Math.PI*fa*t)});
+    }
+    const nS=Math.floor(TMAX*FS);
+    for(let k=0;k<=nS;k++){
+      const t=k/FS;
+      samp.push({x:t,y:Math.sin(2*Math.PI*f*t)});
+    }
+    const d0=ds('#94a3b8',1.8);d0.data=orig;
+    const d1=ds('#0369a1',2.6);d1.data=recon;
+    const d2=ds('#dc2626',0,[],5);d2.data=samp;d2.showLine=false;
+    chT.data.datasets=[d0,d1,d2];
+    chT.options.scales.y.min=-1.35;chT.options.scales.y.max=1.35;
+    chT.update();
+
+    document.getElementById('t-note').textContent = (f<=NY)
+      ? '赤い点（サンプル点）は元の波形（灰）の上に乗り、青の復元波形も元と一致します。'
+      : '赤い点は元の波形（灰）の上にありますが、その並びは青の低い周波数の波形とまったく同じです。サンプル点だけを見ると区別がつきません。';
+
+    // --- sweep ---
+    const sw=[],idl=[],cur=[];
+    for(let i=0;i<=600;i++){
+      const ff=i/600*120;
+      sw.push({x:ff,y:aliasFreq(ff)});
+      idl.push({x:ff,y:ff});
+    }
+    cur.push({x:f,y:0});cur.push({x:f,y:130});
+    const s0=ds('#ea580c',2.6);s0.data=sw;
+    const s1=ds('#94a3b8',1.4,[5,4]);s1.data=idl;
+    const s2=ds('#dc2626',1.6,[4,3]);s2.data=cur;
+    chS.data.datasets=[s0,s1,s2];
+    chS.options.scales.y.min=0;chS.options.scales.y.max=125;
+    chS.update();
+
+    drawFaxis(f,fa);
+  }
+
+  slF.addEventListener('input',render);
+  document.getElementById('b-orig').addEventListener('click',function(){
+    playTone(parseFloat(slF.value));
+  });
+  document.getElementById('b-alias').addEventListener('click',function(){
+    playTone(aliasFreq(parseFloat(slF.value)));
+  });
+  document.getElementById('b-stop').addEventListener('click',stopTone);
+
+  render();
+})();
+</script>
+</body>
+</html>

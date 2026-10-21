@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>畳み込み和（離散時間）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#581c87,#9333ea,#d8b4fe);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:800px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1.5px solid #d8b4fe;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#581c87;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.35rem;padding:0.1em 0.6em;border-radius:7px;min-width:3.4em;text-align:center;color:#7e22ce;background:#fff;border:1.5px solid #d8b4fe;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;background:linear-gradient(90deg,#e9d5ff,#a855f7);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#7e22ce;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#7e22ce;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.42rem;}
+.opt{padding:0.52em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.77rem;font-weight:700;color:var(--text2);line-height:1.4;}
+.opt.active{border-color:#9333ea;background:#faf5ff;color:#6b21a8;}
+.opt:hover{border-color:#9333ea;}
+.opt .sub{display:block;font-weight:400;font-size:0.62rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#stage{display:block;width:100%;}
+.chart-wrap{position:relative;height:175px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:10px;border-radius:3px;}
+.sw.line{height:3px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.calc-box{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1.5px solid #d8b4fe;border-radius:var(--r);padding:0.7rem 0.95rem;font-family:'JetBrains Mono',monospace;font-size:0.86rem;line-height:1.95;color:#3b0764;margin-top:0.55rem;}
+.calc-box .res{font-size:1.1rem;font-weight:700;color:#7e22ce;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.82rem;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.48em 1.05em;border:none;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#7e22ce;color:#fff;}
+.btn-step{background:#a855f7;color:#fff;}
+.seq-table{width:100%;border-collapse:collapse;font-size:0.76rem;margin-top:0.3rem;font-family:'JetBrains Mono',monospace;}
+.seq-table th,.seq-table td{padding:0.26rem 0.3rem;border:1px solid var(--border);text-align:center;}
+.seq-table th{font-size:0.66rem;color:var(--text3);font-weight:700;background:#f8fafc;}
+.seq-table td.cur{background:#f3e8ff;outline:2px solid #a855f7;outline-offset:-2px;font-weight:700;}
+.seq-table td.done{color:#7e22ce;font-weight:700;}
+.seq-table td.yet{color:#cbd5e1;}
+.insight{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1px solid #d8b4fe;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#3b0764;}
+.insight strong{color:#7e22ce;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.how-box{background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.6rem 0.85rem;font-size:0.79rem;line-height:1.85;color:var(--text2);margin-top:0.45rem;}
+.how-box strong{color:var(--text);}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>畳み込み和（離散時間）</h1>
+  <p>y[n] = Σ<sub>k</sub> x[k]·h[n−k] を1ステップずつ追う　<span style="opacity:0.85;">── h が有限長なら、これは FIR システムの出力計算そのもの</span></p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- SIGNAL SELECT -->
+  <div class="card">
+    <div class="card-label" style="color:#9333ea;">信号の組み合わせ</div>
+    <div class="opt-grid">
+      <div class="opt active" id="s-1" onclick="setSig(1)">手計算の例<span class="sub">x=[1,2,3,1] h=[1,1,1]</span></div>
+      <div class="opt" id="s-2" onclick="setSig(2)">移動平均<span class="sub">矩形 × 矩形</span></div>
+      <div class="opt" id="s-3" onclick="setSig(3)">1次系の応答<span class="sub">ステップ × 指数減衰</span></div>
+    </div>
+    <div class="eq" style="margin-top:0.5rem;" id="sig-box"></div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">出力の時刻 n（h をどれだけずらすか）</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-n" min="0" max="5" step="1" value="0">
+      <span class="ctrl-val" id="val-n">0</span>
+    </div>
+    <div class="range-scale" id="range-scale"></div>
+    <div class="btn-row">
+      <button class="btn btn-step" id="b-prev">◀ 1つ戻す</button>
+      <button class="btn btn-step" id="b-next">1つ進める ▶</button>
+      <button class="btn btn-p" id="b-anim">▶▶ 自動で進める</button>
+      <button class="btn" id="b-reset">最初に戻す</button>
+    </div>
+    <div class="note" style="margin-top:0.3rem;">
+      まず「1つ進める」で n を 1 ステップずつ動かし、下の3段の図と計算式がどう変わるかを確かめてください。
+    </div>
+    <div class="calc-box" id="calc-box"></div>
+  </div>
+
+  <!-- STAGE -->
+  <div class="card">
+    <div class="card-label" style="color:#9333ea;">重ね合わせの様子</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>入力 x[k]</span>
+      <span class="legend-item"><span class="sw" style="background:#ea580c;"></span>反転してずらした h[n−k]</span>
+      <span class="legend-item"><span class="sw" style="background:#7e22ce;"></span>積 x[k]·h[n−k]（重なった部分）</span>
+    </div>
+    <div class="canvas-wrap"><canvas id="stage"></canvas></div>
+    <div class="how-box">
+      <strong>図の見かた</strong>　横軸はすべて <strong>k</strong>（上端に k = … と表示）。同じ k の縦位置どうしを見比べます<br>
+      ① <span style="color:#2563eb;font-weight:700;">上段</span>：入力 x[k]。n を変えても動きません<br>
+      ② <span style="color:#ea580c;font-weight:700;">中段</span>：h[n−k]。h を<strong>左右反転</strong>して <strong>n だけ右へずらした</strong>もの。n を増やすと右へ動きます<br>
+      ③ <span style="color:#7e22ce;font-weight:700;">下段</span>：①と②が<strong>同じ k で重なっている所</strong>だけ、両者を掛けた値<br>
+      ④ その<strong>合計が y[n]</strong>（図の右下に表示）。これを n ごとに繰り返すと出力列ができます
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">出力 y[n] = x * h</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#059669;"></span>確定した y[n]</span>
+      <span class="legend-item"><span class="sw" style="background:#cbd5e1;"></span>まだ計算していない</span>
+      <span class="legend-item"><span class="sw line dash" style="border-color:#7e22ce;"></span>現在の n</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-y"></canvas></div>
+    <table class="seq-table" id="seq-table"></table>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・畳み込み　<strong>y[n] = Σ<sub>k</sub> x[k] h[n−k]</strong>　の計算手順は「<strong>反転 → ずらす → 掛ける → 足す</strong>」<br>
+    ・h[n−k] は、k の関数として見ると h を<strong>左右反転して n だけ右にずらした</strong>もの<br>
+    ・各 n ごとに重なった部分の積和を計算し、それが出力の1点になる<br>
+    ・出力の長さは <strong>（x の長さ）＋（h の長さ）− 1</strong>。両端では重なりが少なく値が小さくなる<br>
+    ・インパルス応答 h は「システムの性格」そのもの。入力をずらしながら h の重みで足し合わせるのが線形時不変システムの応答<br>
+    ・x * h = h * x（交換則）が成り立つので、どちらを反転しても同じ結果になる<br>・h が<strong>有限長</strong>のとき、この計算はそのまま <strong>FIR システム</strong>の出力：y[n] = Σ<sub>m</sub> h[m]·x[n−m]。h の各値がフィルタ係数（タップ）に対応する<br>・IIR システムでは h が無限長になるが、入出力関係が畳み込み和で表される点は同じ
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — 畳み込み和（離散時間）</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('stage'), cx=cv.getContext('2d');
+  const slN=document.getElementById('sl-n');
+  let sigId=1, animTimer=null;
+
+  const SIGS={
+    1:{x:[1,2,3,1], h:[1,1,1], name:'手計算の例',
+       desc:'x[k] = [1, 2, 3, 1]　　h[k] = [1, 1, 1]（3点の和）'},
+    2:{x:[1,1,1,1,1,1], h:[0.25,0.25,0.25,0.25], name:'移動平均',
+       desc:'x[k] = [1,1,1,1,1,1]（ステップ）　　h[k] = [0.25]×4（4点移動平均）'},
+    3:{x:[1,1,1,1,1,1], h:[1,0.6,0.36,0.216,0.13], name:'1次系の応答',
+       desc:'x[k] = ステップ　　h[k] = 0.6ᵏ（1次系のインパルス応答）'}
+  };
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    if(v===null||v===undefined||!isFinite(x))return '—';
+    const s=x.toFixed(n);
+    return s.replace(/\.?0+$/,'')||'0';
+  }
+  window.setSig=function(id){
+    sigId=id;
+    [1,2,3].forEach(function(k){
+      document.getElementById('s-'+k).className='opt'+(k===id?' active':'');
+    });
+    const S=SIGS[id];
+    const L=S.x.length+S.h.length-1;
+    slN.max=String(L-1);
+    slN.value='0';
+    render();
+  };
+  function conv(x,h){
+    const L=x.length+h.length-1, y=new Array(L).fill(0);
+    for(let n=0;n<L;n++){
+      for(let k=0;k<x.length;k++){
+        const m=n-k;
+        if(m>=0&&m<h.length)y[n]+=x[k]*h[m];
+      }
+    }
+    return y;
+  }
+
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    cv.width=r.width; cv.height=345;
+  }
+  resize(); window.addEventListener('resize',function(){resize();render();});
+
+  function draw(n){
+    const S=SIGS[sigId], x=S.x, h=S.h;
+    const W=cv.width, H=cv.height;
+    cx.clearRect(0,0,W,H);
+    cx.fillStyle='#fafaf8';cx.fillRect(0,0,W,H);
+
+    const KMIN=-h.length+1, KMAX=x.length+h.length-1;
+    const nK=KMAX-KMIN+1;
+    const L=48, R=W-18;
+    const bw=Math.min(34,(R-L)/nK*0.72);
+    function PX(k){return L+(k-KMIN+0.5)*(R-L)/nK;}
+
+    const rows=[{y:92,lbl:'x[k]'},{y:188,lbl:'h['+n+'−k]'},{y:292,lbl:'積'}];
+    let vmax=0;
+    x.forEach(function(v){vmax=Math.max(vmax,Math.abs(v));});
+    h.forEach(function(v){vmax=Math.max(vmax,Math.abs(v));});
+    const prodMax=Math.max(vmax*vmax,0.1);
+    const hgt=52;
+
+    // 各行の軸
+    rows.forEach(function(rw,ri){
+      cx.strokeStyle='#cbd5e1';cx.lineWidth=1.4;
+      cx.beginPath();cx.moveTo(L-8,rw.y);cx.lineTo(R,rw.y);cx.stroke();
+      cx.fillStyle='#475569';cx.font="bold 11px 'JetBrains Mono'";cx.textAlign='right';
+      cx.fillText(rw.lbl,L-12,rw.y+4);
+    });
+    // k 目盛り（最上段に「k = …」として明示）
+    cx.fillStyle='#475569';cx.font="bold 10px 'JetBrains Mono'";cx.textAlign='right';
+    cx.fillText('k =',L-12,34);
+    for(let k=KMIN;k<=KMAX;k++){
+      const inX=(k>=0&&k<x.length);
+      cx.fillStyle=inX?'#334155':'#cbd5e1';
+      cx.font=(inX?"bold ":"")+"10px 'JetBrains Mono'";
+      cx.textAlign='center';
+      cx.fillText(k,PX(k),34);
+    }
+    // 各 k の縦の目安線（上段〜下段を貫く）
+    cx.strokeStyle='rgba(203,213,225,0.55)';cx.lineWidth=1;
+    for(let k=KMIN;k<=KMAX;k++){
+      cx.beginPath();cx.moveTo(PX(k),40);cx.lineTo(PX(k),H-14);cx.stroke();
+    }
+
+    // 重なり範囲のハイライト
+    let lo=1e9,hi=-1e9;
+    for(let k=0;k<x.length;k++){
+      const m=n-k;
+      if(m>=0&&m<h.length){lo=Math.min(lo,k);hi=Math.max(hi,k);}
+    }
+    if(hi>=lo){
+      cx.fillStyle='rgba(168,85,247,0.10)';
+      cx.fillRect(PX(lo)-bw/2-3,40,(PX(hi)-PX(lo))+bw+6,H-54);
+    }
+
+    function bar(px,y0,val,scale,col){
+      const hh=val/scale*hgt;
+      cx.fillStyle=col;
+      cx.fillRect(px-bw/2,y0-Math.max(hh,0),bw,Math.abs(hh));
+      if(hh<0)cx.fillRect(px-bw/2,y0,bw,-hh);
+      cx.fillStyle='#1e293b';cx.font="9px 'JetBrains Mono'";cx.textAlign='center';
+      if(Math.abs(val)>1e-9)cx.fillText(nf(val,2),px,y0-hh-(hh>=0?4:-11));
+    }
+
+    // 1段目: x[k]
+    for(let k=0;k<x.length;k++)bar(PX(k),rows[0].y,x[k],vmax,'#2563eb');
+    // 2段目: h[n-k]
+    for(let k=KMIN;k<=KMAX;k++){
+      const m=n-k;
+      if(m>=0&&m<h.length)bar(PX(k),rows[1].y,h[m],vmax,'#ea580c');
+    }
+    // 3段目: 積
+    let sum=0;
+    for(let k=0;k<x.length;k++){
+      const m=n-k;
+      if(m>=0&&m<h.length){
+        const p=x[k]*h[m];
+        sum+=p;
+        bar(PX(k),rows[2].y,p,prodMax,'#7e22ce');
+      }
+    }
+    // 合計表示
+    cx.fillStyle='#7e22ce';cx.font="bold 12px 'JetBrains Mono'";cx.textAlign='right';
+    cx.fillText('合計 = y['+n+'] = '+nf(sum,3),R,rows[2].y+32);
+    return sum;
+  }
+
+  function ds(color,w,dash,pr){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:(pr===undefined?0:pr),fill:false,tension:0};}
+  const chY=new Chart(document.getElementById('chart-y').getContext('2d'),{
+    type:'bar',
+    data:{labels:[],datasets:[{data:[],backgroundColor:[]}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{
+        x:{title:{display:true,text:'離散時刻 n',font:{size:10}},ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{display:false}},
+        y:{title:{display:true,text:'y[n]',font:{size:10}},beginAtZero:true,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  function render(){
+    const S=SIGS[sigId], x=S.x, h=S.h;
+    const L=x.length+h.length-1;
+    const n=Math.min(parseInt(slN.value,10),L-1);
+    document.getElementById('val-n').textContent=String(n);
+    document.getElementById('sig-box').innerHTML=
+      S.desc+'<br>出力の長さ = '+x.length+' + '+h.length+' − 1 = <strong>'+L+'</strong>';
+
+    // 目盛り
+    let sc='';
+    for(let i=0;i<L;i++)sc+='<span>'+i+'</span>';
+    document.getElementById('range-scale').innerHTML=sc;
+
+    const sum=draw(n);
+    const y=conv(x,h);
+
+    // 計算式
+    const terms=[];
+    for(let k=0;k<x.length;k++){
+      const m=n-k;
+      if(m>=0&&m<h.length)terms.push('x['+k+']·h['+m+'] = '+nf(x[k],2)+'×'+nf(h[m],2));
+    }
+    document.getElementById('calc-box').innerHTML=
+      'y['+n+'] = Σ<sub>k</sub> x[k]·h['+n+'−k]<br>'+
+      '　= '+(terms.length?terms.join('　＋　'):'0（重なりなし）')+'<br>'+
+      '　= <span class="res">'+nf(y[n],4)+'</span>';
+
+    // 出力グラフ
+    const labels=[],vals=[],cols=[];
+    for(let i=0;i<L;i++){
+      labels.push(String(i));
+      vals.push(y[i]);
+      cols.push(i<n?'#059669':(i===n?'#7e22ce':'#cbd5e1'));
+    }
+    chY.data.labels=labels;
+    chY.data.datasets[0].data=vals;
+    chY.data.datasets[0].backgroundColor=cols;
+    chY.update();
+
+    // 数列表
+    let html='<tr><th>n</th>';
+    for(let i=0;i<L;i++)html+='<th>'+i+'</th>';
+    html+='</tr><tr><td style="background:#f8fafc;font-weight:700;">y[n]</td>';
+    for(let i=0;i<L;i++){
+      const cls=(i===n)?'cur':(i<n?'done':'yet');
+      html+='<td class="'+cls+'">'+(i<=n?nf(y[i],2):'?')+'</td>';
+    }
+    html+='</tr>';
+    document.getElementById('seq-table').innerHTML=html;
+  }
+
+  function stopAnim(){
+    if(animTimer){clearInterval(animTimer);animTimer=null;
+      document.getElementById('b-anim').textContent='▶ 自動で進める';}
+  }
+  slN.addEventListener('input',function(){stopAnim();render();});
+  document.getElementById('b-anim').addEventListener('click',function(){
+    if(animTimer){stopAnim();return;}
+    this.textContent='■ 停止';
+    slN.value='0';render();
+    animTimer=setInterval(function(){
+      const S=SIGS[sigId];
+      const L=S.x.length+S.h.length-1;
+      let v=parseInt(slN.value,10);
+      if(v>=L-1){stopAnim();return;}
+      slN.value=String(v+1);render();
+    },900);
+  });
+  function stepBy(d){
+    stopAnim();
+    const S=SIGS[sigId];
+    const L=S.x.length+S.h.length-1;
+    let v=parseInt(slN.value,10)+d;
+    if(v<0)v=0;
+    if(v>L-1)v=L-1;
+    slN.value=String(v);
+    render();
+  }
+  document.getElementById('b-prev').addEventListener('click',function(){stepBy(-1);});
+  document.getElementById('b-next').addEventListener('click',function(){stepBy(1);});
+  document.getElementById('b-reset').addEventListener('click',function(){
+    stopAnim();slN.value='0';render();
+  });
+
+  window.setSig(1);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>フーリエ級数の積み上げ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#3b0764,#7e22ce,#c084fc);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:760px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1.5px solid #d8b4fe;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#581c87;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem;padding:0.1em 0.6em;border-radius:7px;min-width:3.4em;text-align:center;color:#7e22ce;background:#fff;border:1.5px solid #d8b4fe;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;background:linear-gradient(90deg,#e9d5ff,#a855f7);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#7e22ce;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#7e22ce;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.wave-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.45rem;}
+.wave-opt{padding:0.55em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.8rem;font-weight:700;color:var(--text2);line-height:1.4;}
+.wave-opt.active{border-color:#7e22ce;background:#faf5ff;color:#6b21a8;}
+.wave-opt:hover{border-color:#7e22ce;}
+.wave-opt .sub{display:block;font-weight:400;font-size:0.63rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.chart-wrap{position:relative;height:235px;}
+.chart-wrap.sm{height:160px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.33rem 0.45rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.66rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.82rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.gibbs-box{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1.5px solid #fdba74;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.84rem;line-height:1.75;color:#7c2d12;margin-top:0.5rem;font-weight:700;}
+.parseval-bar{height:22px;border-radius:6px;background:#e5e7eb;overflow:hidden;margin-top:0.35rem;position:relative;}
+.parseval-fill{height:100%;background:linear-gradient(90deg,#86efac,#22c55e);transition:width 0.15s;}
+.parseval-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:0.76rem;font-weight:700;color:#14532d;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.5em 1.1em;border:none;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#7e22ce;color:#fff;}
+.btn-s{background:var(--green);color:#fff;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.insight{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1px solid #d8b4fe;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#3b0764;}
+.insight strong{color:#6b21a8;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.norm-box{background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);padding:0.55rem 0.8rem;font-size:0.78rem;line-height:1.7;color:#14532d;margin-top:0.5rem;}
+.norm-box strong{color:#166534;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>フーリエ級数の積み上げ</h1>
+  <p>高調波を1つずつ足していくと、正弦波の和がどのように目的の波形になるか</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- WAVEFORM SELECT -->
+  <div class="card">
+    <div class="card-label" style="color:#7e22ce;">対象の波形</div>
+    <div class="wave-grid">
+      <div class="wave-opt active" id="w-sq" onclick="setWave('sq')">方形波<span class="sub">奇数次のみ</span></div>
+      <div class="wave-opt" id="w-tri" onclick="setWave('tri')">三角波<span class="sub">奇数次 1/n²</span></div>
+      <div class="wave-opt" id="w-saw" onclick="setWave('saw')">鋸歯状波<span class="sub">全次数 1/n</span></div>
+    </div>
+    <div class="eq" style="margin-top:0.55rem;" id="series-box"></div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">足し合わせる高調波の項数 N</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-n" min="1" max="50" step="1" value="1">
+      <span class="ctrl-val" id="val-n">1</span>
+      <span style="font-weight:700;color:#581c87;">項</span>
+    </div>
+    <div class="range-scale"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span></div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setN(1)">N = 1（基本波のみ）</button>
+      <button class="btn-sm" onclick="setN(3)">N = 3</button>
+      <button class="btn-sm" onclick="setN(10)">N = 10</button>
+      <button class="btn-sm" onclick="setN(50)">N = 50</button>
+      <button class="btn-sm" id="b-anim">▶ 1項ずつ自動で足す</button>
+    </div>
+  </div>
+
+  <!-- MAIN WAVEFORM -->
+  <div class="card">
+    <div class="card-label" style="color:#7e22ce;">合成波形</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>目的の波形</span>
+      <span class="legend-item"><span class="sw" style="background:#7e22ce;"></span>N 項までの和</span>
+      <span class="legend-item"><span class="sw" style="background:#f59e0b;"></span>いま追加した第 N 項</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-sum"></canvas></div>
+    <div class="gibbs-box" id="gibbs-box"></div>
+  </div>
+
+  <!-- INDIVIDUAL HARMONICS -->
+  <div class="card">
+    <div class="card-label" style="color:var(--teal);">各高調波（個別）</div>
+    <div class="chart-wrap sm"><canvas id="chart-harm"></canvas></div>
+    <div class="note">色の濃い波ほど低い次数（振幅が大きい）。高次になるほど細かく小さくなります。</div>
+  </div>
+
+  <!-- SPECTRUM -->
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">振幅スペクトル（各高調波の大きさ）</div>
+    <div class="chart-wrap sm"><canvas id="chart-spec"></canvas></div>
+    <div class="note">濃いバー＝現在足している成分、薄いバー＝まだ足していない成分。</div>
+  </div>
+
+  <!-- PARSEVAL -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">パーシバルの定理（パワーの内訳）</div>
+    <table class="info-table">
+      <tr><th>項目</th><th style="text-align:right;">値</th></tr>
+      <tr><td>元の波形のパワー（時間領域の平均二乗）</td><td class="num" id="r-ptime">—</td></tr>
+      <tr><td>N 項までの高調波パワーの和</td><td class="num" id="r-pfreq">—</td></tr>
+      <tr><td>第 N 項が占めるパワー</td><td class="num" id="r-pn">—</td></tr>
+    </table>
+    <div class="parseval-bar">
+      <div class="parseval-fill" id="pbar"></div>
+      <div class="parseval-txt" id="ptxt"></div>
+    </div>
+    <div class="note">パーシバルの定理：時間領域のパワー ＝ 各周波数成分のパワーの総和。N を増やすと 100% に近づきます。</div>
+  </div>
+
+  <!-- AUDIO -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">音で聴く</div>
+    <div class="btn-row">
+      <button class="btn btn-s" id="b-play">▶ N 項までの和を鳴らす</button>
+      <button class="btn btn-p" id="b-play1">▶ 基本波だけ鳴らす（比較）</button>
+      <button class="btn" id="b-stop">■ 停止</button>
+    </div>
+    <div class="note">基本波 440 Hz として再生します。項数を増やすほど倍音が加わり、やわらかい音から<strong>角の立った硬い音</strong>へ変わります。</div>
+    <div class="norm-box">
+      🔊 <strong>音量を正規化しています</strong><br>
+      各高調波の振幅を、<strong>A特性で重み付けした実効値</strong>で割って再生しています。<br>
+      音の大きさの知覚は実効値だけでなく<strong>周波数</strong>にも依存し、人の耳は 2〜4 kHz に最も敏感で、
+      基本波 440 Hz のような低めの音には鈍くなっています（A特性で約 −5 dB）。
+      そのため単純な実効値の正規化では、倍音が耳の敏感域に入る複合音ほど大きく聞こえ、
+      基本波だけの音が小さく感じられます（実測で約 4 dB の差）。
+      A特性で補正することで、聴き比べで変わるのは<strong>音量ではなく音色（倍音の構成）</strong>だけになります。
+      <div class="note" style="margin-top:0.25rem;" id="norm-note">再生ボタンを押すと正規化の内容が表示されます。</div>
+    </div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・周期信号は、基本波とその<strong>整数倍の周波数（高調波）</strong>の正弦波の和で表せる<br>
+    ・<strong>方形波・三角波</strong>は奇数次の高調波のみ、<strong>鋸歯状波</strong>は全次数を含む<br>
+    ・振幅の減り方が違う：方形波と鋸歯状波は <strong>1/n</strong>、三角波は <strong>1/n²</strong>。1/n² の方が速く収束し、少ない項数できれいな波形になる<br>
+    ・不連続点をもつ波形（方形波・鋸歯状波）では、項数をいくら増やしても<strong>約9%の行き過ぎが消えない</strong>（ギブス現象）。行き過ぎの幅は狭くなるが高さは残る<br>
+    ・連続な三角波にはギブス現象が起きない<br>
+    ・<strong>パーシバルの定理</strong>：時間波形のパワーは各高調波のパワーの和に等しい。基本波だけで方形波のパワーの約81%を占める
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — フーリエ級数の積み上げ</div>
+
+<script>
+(function(){
+  const slN=document.getElementById('sl-n');
+  let wave='sq';
+  let animTimer=null;
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  window.setN=function(v){stopAnim();slN.value=v;render();};
+  window.setWave=function(w){
+    wave=w;
+    ['sq','tri','saw'].forEach(function(k){
+      document.getElementById('w-'+k).className='wave-opt'+(k===w?' active':'');
+    });
+    render();
+  };
+
+  // 第 i 項（i=1..）の {次数 n, 振幅 A, 符号つき係数} を返す
+  function term(i){
+    if(wave==='sq'){
+      const n=2*i-1;
+      return {n:n, c:(4/Math.PI)/n};           // sin(n w t)
+    }
+    if(wave==='tri'){
+      const n=2*i-1;
+      return {n:n, c:(8/(Math.PI*Math.PI))*Math.pow(-1,i-1)/(n*n)};
+    }
+    const n=i;
+    return {n:n, c:(2/Math.PI)*Math.pow(-1,i+1)/n};
+  }
+  // 目的の波形（振幅1）
+  function target(t){
+    const x=t-Math.floor(t);                   // 0..1
+    if(wave==='sq') return (x<0.5)?1:-1;
+    if(wave==='tri'){
+      // 0で0、0.25で1、0.75で-1 の三角波（sin系列と位相を合わせる）
+      if(x<0.25)return 4*x;
+      if(x<0.75)return 2-4*x;
+      return 4*x-4;
+    }
+    // 鋸歯状波：0で0、0.5直前で1、0.5で-1、1で0 （sin系列に対応）
+    return (x<0.5)? 2*x : 2*x-2;
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle,xmax,type){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:type||'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:xmax,title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chSum=mkChart('chart-sum','時間 t（周期で正規化）','振幅',2);
+  const chHarm=mkChart('chart-harm','時間 t','振幅',2);
+  const chSpec=new Chart(document.getElementById('chart-spec').getContext('2d'),{
+    type:'bar',
+    data:{labels:[],datasets:[{data:[],backgroundColor:[]}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{
+        x:{title:{display:true,text:'高調波の次数 n',font:{size:10}},ticks:{font:{family:"'JetBrains Mono'",size:8},maxRotation:0,autoSkip:true,maxTicksLimit:20},grid:{display:false}},
+        y:{title:{display:true,text:'振幅',font:{size:10}},beginAtZero:true,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  // ---- audio ----
+  let actx=null, nodes=[];
+  function stopTone(){
+    nodes.forEach(function(n){try{n.stop();}catch(e){}});
+    nodes=[];
+  }
+  function playSeries(N){
+    stopTone();
+    try{
+      if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();
+      if(actx.state==='suspended')actx.resume();
+      const f0=440;
+      // --- 音量の正規化 ---
+      // 係数の絶対値の総和（＝波形のピーク振幅の上限）で割り、
+      // 項数によらず同じ大きさに聞こえるようにする。
+      // 聴感上の音量は、実効値(RMS)だけでなく「どの周波数か」にも依存する。
+      // 人の耳は 2-4kHz 付近に最も敏感で、220Hz のような低音には鈍い（A特性）。
+      // そのため単純な RMS 正規化では、倍音が耳の敏感域に入る複合音ほど大きく聞こえてしまう。
+      // ここでは A特性で重み付けした実効値で正規化し、聴感上の音量を揃える。
+      function aWeight(f){
+        const f2=f*f;
+        const num=Math.pow(12194,2)*f2*f2;
+        const den=(f2+Math.pow(20.6,2))*
+                  Math.sqrt((f2+Math.pow(107.7,2))*(f2+Math.pow(737.9,2)))*
+                  (f2+Math.pow(12194,2));
+        return (num/den)*Math.pow(10,2.0/20);
+      }
+      let pA=0;
+      const used=[];
+      for(let i=1;i<=N;i++){
+        const T=term(i);
+        if(T.n*f0>18000)break;
+        const w=aWeight(T.n*f0);
+        used.push(T);
+        pA+=Math.pow(T.c*w,2)/2;          // A特性重み付きパワー
+      }
+      let norm=Math.sqrt(pA);             // A特性重み付き実効値
+      if(norm<1e-9)norm=1;
+      const master=actx.createGain();
+      master.gain.setValueAtTime(0.0001,actx.currentTime);
+      master.gain.exponentialRampToValueAtTime(0.10,actx.currentTime+0.04);
+      master.gain.setValueAtTime(0.10,actx.currentTime+1.4);
+      master.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+1.8);
+      master.connect(actx.destination);
+      used.forEach(function(T){
+        const o=actx.createOscillator(), g=actx.createGain();
+        o.type='sine';
+        o.frequency.setValueAtTime(T.n*f0,actx.currentTime);
+        g.gain.setValueAtTime(Math.abs(T.c)/norm,actx.currentTime);
+        o.connect(g);g.connect(master);
+        o.start();o.stop(actx.currentTime+1.85);
+        nodes.push(o);
+      });
+      document.getElementById('norm-note').textContent=
+        '再生中：'+used.length+' 項、A特性重み付き実効値 = '+norm.toFixed(3)+' で割って音量を揃えています。';
+    }catch(e){}
+  }
+
+  function stopAnim(){
+    if(animTimer){clearInterval(animTimer);animTimer=null;
+      document.getElementById('b-anim').textContent='▶ 1項ずつ自動で足す';}
+  }
+
+  function render(){
+    const N=parseInt(slN.value,10);
+    document.getElementById('val-n').textContent=String(N);
+
+    // 級数の式
+    let sb;
+    if(wave==='sq'){
+      sb='方形波：f(t) = <span class="frac"><span class="num">4</span><span class="den">π</span></span> '+
+         '( sin ωt + <span class="frac"><span class="num">1</span><span class="den">3</span></span> sin 3ωt '+
+         '+ <span class="frac"><span class="num">1</span><span class="den">5</span></span> sin 5ωt + … )<br>'+
+         '→ 奇数次のみ、振幅は 1/n に比例';
+    }else if(wave==='tri'){
+      sb='三角波：f(t) = <span class="frac"><span class="num">8</span><span class="den">π²</span></span> '+
+         '( sin ωt − <span class="frac"><span class="num">1</span><span class="den">9</span></span> sin 3ωt '+
+         '+ <span class="frac"><span class="num">1</span><span class="den">25</span></span> sin 5ωt − … )<br>'+
+         '→ 奇数次のみ、振幅は 1/n² に比例（収束が速い）';
+    }else{
+      sb='鋸歯状波：f(t) = <span class="frac"><span class="num">2</span><span class="den">π</span></span> '+
+         '( sin ωt − <span class="frac"><span class="num">1</span><span class="den">2</span></span> sin 2ωt '+
+         '+ <span class="frac"><span class="num">1</span><span class="den">3</span></span> sin 3ωt − … )<br>'+
+         '→ 全次数を含む、振幅は 1/n に比例';
+    }
+    document.getElementById('series-box').innerHTML=sb;
+
+    // ---- waveform data ----
+    const NP=1600, TMAX=2;
+    const sumD=[],tgtD=[],lastD=[];
+    let maxV=-1e9,minV=1e9;
+    for(let k=0;k<=NP;k++){
+      const t=k/NP*TMAX;
+      let s=0;
+      for(let i=1;i<=N;i++){
+        const T=term(i);
+        s+=T.c*Math.sin(2*Math.PI*T.n*t);
+      }
+      const TL=term(N);
+      sumD.push({x:t,y:s});
+      tgtD.push({x:t,y:target(t)});
+      lastD.push({x:t,y:TL.c*Math.sin(2*Math.PI*TL.n*t)});
+      maxV=Math.max(maxV,s);minV=Math.min(minV,s);
+    }
+    const d0=ds('#94a3b8',1.8,[6,4]);d0.data=tgtD;
+    const d2=ds('#f59e0b',1.6);d2.data=lastD;
+    const d1=ds('#7e22ce',2.8);d1.data=sumD;
+    chSum.data.datasets=[d0,d2,d1];
+    chSum.options.scales.y.min=-1.45;chSum.options.scales.y.max=1.45;
+    chSum.update();
+
+    // ---- individual harmonics ----
+    const hsets=[];
+    const showMax=Math.min(N,12);
+    for(let i=1;i<=showMax;i++){
+      const T=term(i);
+      const arr=[];
+      for(let k=0;k<=400;k++){
+        const t=k/400*TMAX;
+        arr.push({x:t,y:T.c*Math.sin(2*Math.PI*T.n*t)});
+      }
+      const alpha=0.25+0.75*(1-(i-1)/Math.max(1,showMax-1));
+      const col='rgba(8,145,178,'+alpha.toFixed(2)+')';
+      const dd=ds(col,1.8);dd.data=arr;hsets.push(dd);
+    }
+    chHarm.data.datasets=hsets;
+    chHarm.options.scales.y.min=-1.45;chHarm.options.scales.y.max=1.45;
+    chHarm.update();
+
+    // ---- spectrum ----
+    const MAXTERM=50;
+    const labels=[],vals=[],cols=[];
+    let nmax=0;
+    for(let i=1;i<=MAXTERM;i++){nmax=Math.max(nmax,term(i).n);}
+    const amp={};
+    for(let i=1;i<=MAXTERM;i++){const T=term(i);amp[T.n]={a:Math.abs(T.c),on:(i<=N)};}
+    for(let n=1;n<=Math.min(nmax,60);n++){
+      labels.push(String(n));
+      if(amp[n]){vals.push(amp[n].a);cols.push(amp[n].on?'#ea580c':'#fed7aa');}
+      else{vals.push(0);cols.push('#f1f5f9');}
+    }
+    chSpec.data.labels=labels;
+    chSpec.data.datasets[0].data=vals;
+    chSpec.data.datasets[0].backgroundColor=cols;
+    chSpec.update();
+
+    // ---- Parseval ----
+    // 時間領域パワー（目的波形の平均二乗）
+    let pt=0;
+    for(let k=0;k<4000;k++){const t=k/4000;const y=target(t);pt+=y*y;}
+    pt/=4000;
+    let pf=0,pn=0;
+    for(let i=1;i<=N;i++){const T=term(i);const p=T.c*T.c/2;pf+=p;if(i===N)pn=p;}
+    const ratio=Math.max(0,Math.min(1,pf/pt));
+    document.getElementById('r-ptime').textContent=nf(pt,4);
+    document.getElementById('r-pfreq').textContent=nf(pf,4);
+    document.getElementById('r-pn').textContent=nf(pn,5)+'　（全体の '+nf(100*pn/pt,2)+' %）';
+    document.getElementById('pbar').style.width=(100*ratio)+'%';
+    document.getElementById('ptxt').textContent=nf(100*ratio,2)+' % のパワーを再現';
+
+    // ---- Gibbs ----
+    const gb=document.getElementById('gibbs-box');
+    if(wave==='tri'){
+      const err=Math.max(Math.abs(maxV-1),Math.abs(minV+1));
+      gb.style.background='linear-gradient(135deg,#ecfdf5,#d1fae5)';
+      gb.style.borderColor='#6ee7b7';gb.style.color='#065f46';
+      gb.innerHTML='三角波は<strong>連続な波形</strong>なのでギブス現象は起きません。'+
+        '最大値 = '+nf(maxV,4)+'（目標 1.000）、誤差 '+nf(err,4)+' は N を増やすほど 0 に近づきます。';
+    }else{
+      const over=(maxV-1)*100;
+      if(over<0.5){
+        gb.style.background='linear-gradient(135deg,#f8fafc,#f1f5f9)';
+        gb.style.borderColor='#cbd5e1';gb.style.color='#334155';
+        gb.innerHTML='現在の最大値は '+nf(maxV,4)+'（目標 1.000）。項数が少ないため、まだ波形が目標に届いていません。'+
+          'N を増やしていくと不連続点のそばで<strong>行き過ぎ（ギブス現象）</strong>が現れます。';
+      }else{
+        gb.style.background='linear-gradient(135deg,#fff7ed,#ffedd5)';
+        gb.style.borderColor='#fdba74';gb.style.color='#7c2d12';
+        gb.innerHTML='⚡ <strong>ギブス現象</strong>：不連続点のそばで最大値 '+nf(maxV,4)+
+          '（目標 1.000）＝ <strong>'+nf(over,2)+'% の行き過ぎ</strong>。'+
+          'N をいくら増やしても行き過ぎの<strong>高さは約 17.9%（ジャンプ量 2 の約 9%）に留まり</strong>、幅が狭くなるだけです。';
+      }
+    }
+  }
+
+  slN.addEventListener('input',function(){stopAnim();render();});
+  document.getElementById('b-anim').addEventListener('click',function(){
+    if(animTimer){stopAnim();return;}
+    this.textContent='■ 停止';
+    slN.value=1;render();
+    animTimer=setInterval(function(){
+      let v=parseInt(slN.value,10);
+      if(v>=50){stopAnim();return;}
+      slN.value=v+1;render();
+    },220);
+  });
+  document.getElementById('b-play').addEventListener('click',function(){playSeries(parseInt(slN.value,10));});
+  document.getElementById('b-play1').addEventListener('click',function(){playSeries(1);});
+  document.getElementById('b-stop').addEventListener('click',stopTone);
+
+  render();
+})();
+</script>
+</body>
+</html>

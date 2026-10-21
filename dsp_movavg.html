@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>移動平均フィルタの周波数特性</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#134e4a,#0d9488,#5eead4);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:800px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1.5px solid #5eead4;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#134e4a;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.35rem;padding:0.1em 0.6em;border-radius:7px;min-width:3.4em;text-align:center;color:#0f766e;background:#fff;border:1.5px solid #5eead4;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;background:linear-gradient(90deg,#ccfbf1,#14b8a6);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#0f766e;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#0f766e;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.chart-wrap{position:relative;height:200px;}
+.chart-wrap.sm{height:160px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.box{height:10px;border-radius:3px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.79rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.32rem 0.45rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.81rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.key-box{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1.5px solid #5eead4;border-radius:var(--r);padding:0.65rem 0.9rem;font-size:0.85rem;line-height:1.75;color:#134e4a;margin-top:0.55rem;font-weight:700;}
+.insight{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1px solid #5eead4;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#134e4a;}
+.insight strong{color:#0f766e;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.45em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#0f766e;color:#fff;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>移動平均フィルタの周波数特性</h1>
+  <p>最も簡単なFIRフィルタ。タップ数を増やすと雑音は減るが、何が犠牲になるか</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">タップ数 M（何点の平均をとるか）</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-m" min="1" max="32" step="1" value="4">
+      <span class="ctrl-val" id="val-m">4</span>
+      <span style="font-weight:700;color:#134e4a;">点</span>
+    </div>
+    <div class="range-scale"><span>1</span><span>8</span><span>16</span><span>24</span><span>32</span></div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setM(1)">M=1（素通し）</button>
+      <button class="btn-sm" onclick="setM(4)">M=4</button>
+      <button class="btn-sm" onclick="setM(8)">M=8</button>
+      <button class="btn-sm" onclick="setM(16)">M=16</button>
+      <button class="btn-sm" onclick="setM(32)">M=32</button>
+    </div>
+    <div class="eq" style="margin-top:0.5rem;" id="eq-box"></div>
+    <div class="key-box" id="key-box"></div>
+  </div>
+
+  <!-- IMPULSE RESPONSE -->
+  <div class="card">
+    <div class="card-label" style="color:#0d9488;">インパルス応答 h[n]（＝フィルタ係数）</div>
+    <div class="chart-wrap sm"><canvas id="chart-h"></canvas></div>
+    <div class="note">すべて同じ高さ 1/M の長方形。<strong>有限個しかない＝FIRフィルタ</strong>で、必ず安定です。</div>
+  </div>
+
+  <!-- AMPLITUDE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">振幅特性 |H(e<sup>jω</sup>)|</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#0d9488;"></span>|H| [dB]</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#2563eb;"></span>−3 dB（遮断周波数）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>第1零点 ω = 2π/M</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-mag"></canvas></div>
+    <div class="note">直流（ω=0）は必ず 1 倍で通し、高い周波数ほど減衰します＝<strong>低域通過フィルタ</strong>。ただし<strong>サイドローブ</strong>が残ります。</div>
+  </div>
+
+  <!-- PHASE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">位相特性 ∠H(e<sup>jω</sup>)</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#7c3aed;"></span>位相 [deg]（アンラップ）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>直線 −ω(M−1)/2</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-pha"></canvas></div>
+    <div class="note">位相が<strong>周波数に比例する直線</strong>になる＝<strong>線形位相</strong>。すべての周波数成分が同じ時間だけ遅れるため、波形が歪みません。</div>
+  </div>
+
+  <!-- TIME DOMAIN -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">雑音の平滑化（時間波形）</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#cbd5e1;"></span>雑音を含む入力</span>
+      <span class="legend-item"><span class="sw" style="background:#0d9488;"></span>移動平均の出力</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>もとの信号（答え）</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-time"></canvas></div>
+    <div class="btn-row">
+      <button class="btn btn-p" id="b-reroll">🎲 雑音を引き直す</button>
+    </div>
+    <div class="note" id="time-note"></div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">数値</div>
+    <table class="info-table" id="num-table"></table>
+    <div class="note">アナログ周波数との対応：ω = 2πf/f<sub>s</sub>。サンプリング周波数 f<sub>s</sub> = 1000 Hz とした場合の値も併記しています。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・M 点移動平均　y[n] = (1/M) Σ<sub>k=0</sub><sup>M−1</sup> x[n−k]　は、係数がすべて 1/M の<strong>FIRフィルタ</strong><br>
+    ・振幅特性は |H| = |sin(ωM/2) / (M sin(ω/2))|。<strong>第1零点は ω = 2π/M</strong> で、M が大きいほど遮断周波数が下がる<br>
+    ・雑音の標準偏差は <strong>1/√M</strong> に減る（M=4 なら半分、M=16 なら 1/4）<br>
+    ・ただし<strong>サイドローブが約 −13 dB しか下がらない</strong>ため、阻止域の減衰が不十分。これが窓関数を使った設計（第9回）につながる動機<br>
+    ・位相は<strong>完全な直線</strong>（線形位相）。群遅延は一定で (M−1)/2 サンプル。波形の形を保ったまま遅れるだけ<br>
+    ・<strong>トレードオフ</strong>：M を増やすと雑音は減るが、応答が鈍くなり（立ち上がりが遅れ）遅延も増える
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — 移動平均フィルタの周波数特性</div>
+
+<script>
+(function(){
+  const slM=document.getElementById('sl-m');
+  const FS=1000;      // 仮のサンプリング周波数 [Hz]（アナログ周波数対応の表示用）
+  let seed=20240;
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  window.setM=function(v){slM.value=v;render();};
+
+  function makeRng(s){
+    let st=s>>>0;
+    return function(){st=(st*1664525+1013904223)>>>0;return st/4294967296;};
+  }
+  function gauss(rng){
+    let u=0,v=0;
+    while(u===0)u=rng();
+    while(v===0)v=rng();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+
+  // |H(e^jw)| と位相
+  function Hmag(M,w){
+    const s=Math.sin(w/2);
+    if(Math.abs(s)<1e-12)return 1;
+    return Math.abs(Math.sin(w*M/2)/(M*s));
+  }
+  function Hpha(M,w){
+    // (1/M)Σ e^{-jwk} = e^{-jw(M-1)/2} sin(wM/2)/(M sin(w/2))
+    const s=Math.sin(w/2);
+    let amp;
+    if(Math.abs(s)<1e-12)amp=1; else amp=Math.sin(w*M/2)/(M*s);
+    let ph=-w*(M-1)/2;
+    if(amp<0)ph+=Math.PI;   // 符号反転ぶんの位相跳び
+    return ph*180/Math.PI;
+  }
+
+  function ds(color,w,dash,pr){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:(pr===undefined?0:pr),fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chH=new Chart(document.getElementById('chart-h').getContext('2d'),{
+    type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:'#0d9488'}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{x:{title:{display:true,text:'n',font:{size:10}},ticks:{font:{family:"'JetBrains Mono'",size:9},autoSkip:true,maxTicksLimit:17},grid:{display:false}},
+              y:{title:{display:true,text:'h[n]',font:{size:10}},beginAtZero:true,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}},
+      plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+  const chMag=mkChart('chart-mag','ω [rad]（0 〜 π）','|H| [dB]');
+  const chPha=mkChart('chart-pha','ω [rad]','位相 [deg]');
+  const chT=mkChart('chart-time','サンプル番号 n','振幅');
+
+  function render(){
+    const M=parseInt(slM.value,10);
+    document.getElementById('val-m').textContent=String(M);
+
+    document.getElementById('eq-box').innerHTML=
+      'y[n] = <span class="frac"><span class="num">1</span><span class="den">'+M+'</span></span>'+
+      ' ( x[n]'+(M>1?' + x[n−1]':'')+(M>2?' + …':'')+(M>1?' + x[n−'+(M-1)+']':'')+' )<br>'+
+      '|H(e<sup>jω</sup>)| = | sin(ω'+M+'/2) / ('+M+' sin(ω/2)) |';
+
+    // --- impulse response ---
+    const labels=[],vals=[];
+    for(let n=0;n<Math.max(M,8);n++){
+      labels.push(String(n));
+      vals.push(n<M?1/M:0);
+    }
+    chH.data.labels=labels;
+    chH.data.datasets[0].data=vals;
+    chH.options.scales.y.max=Math.max(1/M*1.3,0.15);
+    chH.update();
+
+    // --- magnitude ---
+    const magD=[],m3=[],zD=[];
+    let w3=null;
+    for(let i=0;i<=800;i++){
+      const w=i/800*Math.PI;
+      const db=20*Math.log10(Math.max(Hmag(M,w),1e-6));
+      magD.push({x:w,y:db});
+      m3.push({x:w,y:-3});
+      if(w3===null&&db<-3&&i>0)w3=w;
+    }
+    const zero1=(M>1)?2*Math.PI/M:null;
+    if(zero1!==null&&zero1<=Math.PI){zD.push({x:zero1,y:-70});zD.push({x:zero1,y:5});}
+    const a0=ds('#0d9488',2.5);a0.data=magD;
+    const a1=ds('#2563eb',1.3,[5,4]);a1.data=m3;
+    const a2=ds('#dc2626',1.5,[4,3]);a2.data=zD;
+    chMag.data.datasets=(zD.length?[a1,a2,a0]:[a1,a0]);
+    chMag.options.scales.x.min=0;chMag.options.scales.x.max=Math.PI;
+    chMag.options.scales.y.min=-60;chMag.options.scales.y.max=5;
+    chMag.update();
+
+    // --- phase ---
+    const phD=[],lnD=[];
+    for(let i=0;i<=800;i++){
+      const w=i/800*Math.PI;
+      phD.push({x:w,y:Hpha(M,w)});
+      lnD.push({x:w,y:-w*(M-1)/2*180/Math.PI});
+    }
+    const p0=ds('#94a3b8',1.4,[5,4]);p0.data=lnD;
+    const p1=ds('#7c3aed',2.3);p1.data=phD;
+    chPha.data.datasets=[p0,p1];
+    chPha.options.scales.x.min=0;chPha.options.scales.x.max=Math.PI;
+    let plo=0,phi=0;
+    lnD.forEach(function(p){plo=Math.min(plo,p.y);phi=Math.max(phi,p.y);});
+    chPha.options.scales.y.min=plo-40;chPha.options.scales.y.max=phi+200;
+    chPha.update();
+
+    // --- time domain ---
+    const N=200, rng=makeRng(seed);
+    const clean=new Float64Array(N), noisy=new Float64Array(N);
+    for(let n=0;n<N;n++){
+      clean[n]=(n<60?0:(n<130?1:0.3));            // 階段状の信号
+      noisy[n]=clean[n]+0.35*gauss(rng);
+    }
+    const out=new Float64Array(N);
+    for(let n=0;n<N;n++){
+      let s=0,c=0;
+      for(let k=0;k<M;k++){const m=n-k;if(m>=0){s+=noisy[m];c++;}}
+      out[n]=s/Math.max(c,1);
+    }
+    const nD=[],oD=[],cD=[];
+    for(let n=0;n<N;n++){
+      nD.push({x:n,y:noisy[n]});oD.push({x:n,y:out[n]});cD.push({x:n,y:clean[n]});
+    }
+    const t0=ds('#cbd5e1',1.2);t0.data=nD;
+    const t1=ds('#dc2626',1.4,[5,4]);t1.data=cD;
+    const t2=ds('#0d9488',2.3);t2.data=oD;
+    chT.data.datasets=[t0,t1,t2];
+    chT.options.scales.x.min=0;chT.options.scales.x.max=N-1;
+    chT.options.scales.y.min=-1;chT.options.scales.y.max=2;
+    chT.update();
+
+    // 雑音低減の実測
+    let v1=0,v2=0,c1=0;
+    for(let n=0;n<N;n++){
+      const e1=noisy[n]-clean[n];
+      v1+=e1*e1;c1++;
+    }
+    for(let n=M;n<N;n++){
+      // 階段の変化点を避けて定常部分だけで評価
+      if((n>10&&n<55)||(n>75&&n<125)||(n>145&&n<195)){
+        const e2=out[n]-clean[n];
+        v2+=e2*e2;
+      }
+    }
+    let cnt=0;
+    for(let n=0;n<N;n++)if((n>10&&n<55)||(n>75&&n<125)||(n>145&&n<195))cnt++;
+    const sd1=Math.sqrt(v1/c1), sd2=Math.sqrt(v2/Math.max(cnt,1));
+
+    document.getElementById('time-note').textContent=
+      'M='+M+' のとき、雑音の標準偏差は '+nf(sd1,3)+' → '+nf(sd2,3)+
+      '（理論では 1/√M = '+nf(1/Math.sqrt(M),3)+' 倍）。'+
+      (M>=8?'一方で、信号が変化する所の立ち上がりが鈍くなり、遅れも大きくなっています。':'');
+
+    // --- key box ---
+    const kb=document.getElementById('key-box');
+    if(M===1){
+      kb.innerHTML='M = 1 は平均をとらない＝<strong>素通し</strong>。|H| = 1（すべての周波数をそのまま通す）。';
+    }else{
+      kb.innerHTML='M = '+M+' → 第1零点 ω = 2π/'+M+' = '+nf(zero1,4)+' rad'+
+        (zero1<=Math.PI?'（f<sub>s</sub>=1000Hz なら '+nf(zero1/(2*Math.PI)*FS,1)+' Hz）':'（π を超えるため図には現れません）')+
+        '　／　雑音は <strong>1/√'+M+' = '+nf(1/Math.sqrt(M),3)+' 倍</strong>に減少　／　遅延 '+nf((M-1)/2,1)+' サンプル';
+    }
+
+    // --- table ---
+    let html='<tr><th>項目</th><th style="text-align:right;">値</th></tr>';
+    html+='<tr><td>タップ数 M</td><td class="num">'+M+'</td></tr>';
+    html+='<tr><td>フィルタ係数</td><td class="num">すべて 1/'+M+' = '+nf(1/M,4)+'</td></tr>';
+    html+='<tr><td>−3 dB 遮断周波数</td><td class="num">'+(w3?nf(w3,4)+' rad（'+nf(w3/(2*Math.PI)*FS,1)+' Hz）':'—')+'</td></tr>';
+    html+='<tr><td>第1零点</td><td class="num">'+((zero1&&zero1<=Math.PI)?nf(zero1,4)+' rad（'+nf(zero1/(2*Math.PI)*FS,1)+' Hz）':'—')+'</td></tr>';
+    // 第1サイドローブ
+    let side=-999;
+    if(zero1&&zero1<Math.PI){
+      for(let i=0;i<=800;i++){
+        const w=i/800*Math.PI;
+        if(w>zero1*1.05){
+          const db=20*Math.log10(Math.max(Hmag(M,w),1e-6));
+          if(db>side)side=db;
+        }
+      }
+    }
+    html+='<tr><td>第1サイドローブ</td><td class="num">'+(side>-900?nf(side,2)+' dB':'—')+'</td></tr>';
+    html+='<tr><td>群遅延（一定）</td><td class="num">'+nf((M-1)/2,1)+' サンプル</td></tr>';
+    html+='<tr><td>雑音の低減率</td><td class="num">1/√M = '+nf(1/Math.sqrt(M),4)+'</td></tr>';
+    document.getElementById('num-table').innerHTML=html;
+  }
+
+  slM.addEventListener('input',render);
+  document.getElementById('b-reroll').addEventListener('click',function(){
+    seed=(seed*1103515245+12345)>>>0;render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

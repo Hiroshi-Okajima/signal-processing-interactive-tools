@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>不規則信号の統計量</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#1e1b4b,#4f46e5,#a5b4fc);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:810px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1.5px solid #a5b4fc;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#312e81;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.35rem;padding:0.1em 0.6em;border-radius:7px;min-width:4.2em;text-align:center;color:#4338ca;background:#fff;border:1.5px solid #a5b4fc;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;background:linear-gradient(90deg,#fca5a5,#fcd34d 45%,#86efac);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#4338ca;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#4338ca;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.45rem;}
+.opt{padding:0.55em 0.45em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.78rem;font-weight:700;color:var(--text2);line-height:1.45;}
+.opt.active{border-color:#4f46e5;background:#eef2ff;color:#3730a3;}
+.opt:hover{border-color:#4f46e5;}
+.opt .sub{display:block;font-weight:400;font-size:0.63rem;color:var(--text3);margin-top:0.1rem;}
+.chart-wrap{position:relative;height:200px;}
+.chart-wrap.sm{height:160px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.box{height:10px;border-radius:3px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;margin-top:0.55rem;}
+@media(max-width:600px){.stat-grid{grid-template-columns:1fr;}}
+.stat{border-radius:var(--r);padding:0.6rem 0.8rem;border:1.5px solid #c7d2fe;background:#eef2ff;}
+.stat .ttl{font-size:0.68rem;font-weight:700;color:#4338ca;letter-spacing:0.04em;}
+.stat .val{font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:#312e81;}
+.stat .sub{font-size:0.72rem;color:#4338ca;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.79rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.32rem 0.45rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.81rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.verdict{border-radius:var(--r);padding:0.68rem 0.95rem;font-size:0.87rem;font-weight:700;margin-top:0.55rem;line-height:1.72;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1.5px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1.5px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.45em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#4338ca;color:#fff;}
+.insight{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #a5b4fc;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#1e1b4b;}
+.insight strong{color:#4338ca;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>不規則信号の統計量</h1>
+  <p>有限個のデータから求めた平均・分散は、真の値のまわりでばらつく。その大きさは何で決まるか</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- DISTRIBUTION -->
+  <div class="card">
+    <div class="card-label" style="color:#4f46e5;">元の確率分布（真の平均 0、真の分散 1）</div>
+    <div class="opt-grid">
+      <div class="opt active" id="d-norm" onclick="setDist('norm')">正規分布<span class="sub">ガウス雑音</span></div>
+      <div class="opt" id="d-unif" onclick="setDist('unif')">一様分布<span class="sub">±√3 の間</span></div>
+      <div class="opt" id="d-bin" onclick="setDist('bin')">2値分布<span class="sub">±1 のどちらか</span></div>
+    </div>
+    <div class="eq" style="margin-top:0.5rem;" id="dist-box"></div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">データ数 N（何点から統計量を計算するか）</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-n" min="2" max="12" step="1" value="4">
+      <span class="ctrl-val" id="val-n">16</span>
+      <span style="font-weight:700;color:#312e81;">点</span>
+    </div>
+    <div class="range-scale"><span>4</span><span>16</span><span>64</span><span>256</span><span>1024</span><span>4096</span></div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setN(2)">N=4</button>
+      <button class="btn-sm" onclick="setN(4)">N=16</button>
+      <button class="btn-sm" onclick="setN(6)">N=64</button>
+      <button class="btn-sm" onclick="setN(8)">N=256</button>
+      <button class="btn-sm" onclick="setN(10)">N=1024</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="ttl">標本平均のばらつき（標準偏差）</div>
+        <div class="val" id="s-mean">—</div>
+        <div class="sub" id="s-mean-sub">—</div>
+      </div>
+      <div class="stat">
+        <div class="ttl">標本分散のばらつき（標準偏差）</div>
+        <div class="val" id="s-var">—</div>
+        <div class="sub" id="s-var-sub">—</div>
+      </div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <!-- SAMPLE DATA -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">1回ぶんのデータ（N 点）とそこから計算した統計量</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw box" style="background:#2563eb;"></span>データ点</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>この回の標本平均</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#059669;"></span>真の平均 0</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-data"></canvas></div>
+    <table class="info-table" id="one-table"></table>
+    <div class="btn-row">
+      <button class="btn btn-p" id="b-reroll">🎲 もう一度データを取る</button>
+    </div>
+  </div>
+
+  <!-- HISTOGRAM OF SAMPLE MEANS -->
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">標本平均の分布（同じ実験を2000回くり返した結果）</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw box" style="background:#7c3aed;"></span>標本平均のヒストグラム</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#059669;"></span>真の平均 0</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-hist"></canvas></div>
+    <div class="note" id="hist-note"></div>
+  </div>
+
+  <!-- 1/sqrt(N) CURVE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">データ数とばらつきの関係</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#059669;"></span>標本平均の標準偏差（実測）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#2563eb;"></span>理論 σ/√N</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>現在の N</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-curve"></canvas></div>
+    <div class="note">両対数で見ると直線になり、傾きが −1/2 であることが分かります（N を 4 倍にするとばらつきは半分）。</div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">数値</div>
+    <table class="info-table" id="num-table"></table>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・<strong>標本平均</strong>　x̄ = (1/N)Σx<sub>i</sub>　は、真の平均のまわりでばらつく確率変数。その標準偏差は <strong>σ/√N</strong><br>
+    ・<strong>N を 4 倍にしてもばらつきは半分</strong>にしかならない。精度を1桁上げるには100倍のデータが必要<br>
+    ・<strong>標本分散</strong>（不偏分散、N−1 で割る）の標準偏差は正規分布なら σ²√(2/(N−1))。平均より収束が遅い<br>
+    ・N を増やすと標本平均が真の値に近づく＝<strong>大数の法則</strong>。ばらつきが 0 に収束するので一致推定量といえる<br>
+    ・元の分布が正規分布でなくても、<strong>標本平均の分布は正規分布に近づく</strong>＝<strong>中心極限定理</strong>。一様分布や2値分布を選んで確かめられる<br>
+    ・<strong>エルゴード性</strong>が成り立つ定常信号では、1本の波形を長く測れば集合平均が求まる。この「長く測る」ことの効果が σ/√N
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — 不規則信号の統計量</div>
+
+<script>
+(function(){
+  const slN=document.getElementById('sl-n');
+  let dist='norm', seed=4649;
+  const TRIALS=2000;
+
+  function nf(v,n){
+    n=(n===undefined)?4:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  window.setN=function(i){slN.value=i;render();};
+  window.setDist=function(d){
+    dist=d;
+    ['norm','unif','bin'].forEach(function(k){
+      document.getElementById('d-'+k).className='opt'+(k===d?' active':'');
+    });
+    render();
+  };
+
+  function makeRng(s){
+    let st=s>>>0;
+    return function(){st=(st*1664525+1013904223)>>>0;return st/4294967296;};
+  }
+  // 平均0・分散1 の乱数
+  function sample(rng){
+    if(dist==='norm'){
+      let u=0,v=0;
+      while(u===0)u=rng();
+      while(v===0)v=rng();
+      return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+    }
+    if(dist==='unif')return (rng()*2-1)*Math.sqrt(3);
+    return (rng()<0.5)?-1:1;
+  }
+
+  function ds(color,w,dash,pr){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:(pr===undefined?0:pr),fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle,logX){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x: logX?{type:'logarithmic',title:{display:true,text:xTitle,font:{size:10}},
+                   ticks:{font:{family:"'JetBrains Mono'",size:9},
+                     callback:function(v){const l=Math.log2(v);return (Math.abs(l-Math.round(l))<1e-9&&Math.round(l)%2===0)?v.toString():'';}},
+                   grid:{color:'#f0f0f0'}}
+                 :{type:'linear',title:{display:true,text:xTitle,font:{size:10}},
+                   ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chD=mkChart('chart-data','データ番号 i','値');
+  const chC=mkChart('chart-curve','データ数 N','標準偏差',true);
+  chC.options.scales.y.type='logarithmic';
+  const chH=new Chart(document.getElementById('chart-hist').getContext('2d'),{
+    type:'bar',
+    data:{labels:[],datasets:[{data:[],backgroundColor:'#7c3aed'},
+                              {type:'line',data:[],borderColor:'#059669',borderWidth:1.6,borderDash:[5,4],pointRadius:0,fill:false}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{x:{title:{display:true,text:'標本平均の値',font:{size:10}},ticks:{font:{family:"'JetBrains Mono'",size:8},maxRotation:0,autoSkip:true,maxTicksLimit:11},grid:{display:false}},
+              y:{title:{display:true,text:'度数',font:{size:10}},beginAtZero:true,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}},
+      plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+
+  function render(){
+    const i=parseInt(slN.value,10);
+    const N=Math.pow(2,i);
+    document.getElementById('val-n').textContent=String(N);
+
+    const names={norm:'正規分布（ガウス）',unif:'一様分布 U(−√3, √3)',bin:'2値分布（±1 を等確率）'};
+    document.getElementById('dist-box').innerHTML=
+      '<strong>'+names[dist]+'</strong>　真の平均 μ = 0、真の分散 σ² = 1（σ = 1）<br>'+
+      '標本平均 x̄ = <span class="frac"><span class="num">1</span><span class="den">N</span></span>Σx<sub>i</sub>　'+
+      '標本分散 s² = <span class="frac"><span class="num">1</span><span class="den">N−1</span></span>Σ(x<sub>i</sub>−x̄)²';
+
+    // --- 1回ぶんのデータ ---
+    const rng1=makeRng(seed);
+    const show=Math.min(N,200);
+    const dat=[],meanLine=[],zeroLine=[];
+    let s1=0,s2=0;
+    const vals=new Float64Array(N);
+    for(let k=0;k<N;k++){
+      const v=sample(rng1);
+      vals[k]=v;s1+=v;
+    }
+    const xbar=s1/N;
+    for(let k=0;k<N;k++)s2+=(vals[k]-xbar)*(vals[k]-xbar);
+    const svar=s2/Math.max(N-1,1);
+    for(let k=0;k<show;k++)dat.push({x:k,y:vals[k]});
+    meanLine.push({x:0,y:xbar});meanLine.push({x:show-1,y:xbar});
+    zeroLine.push({x:0,y:0});zeroLine.push({x:show-1,y:0});
+    const d0=ds('#2563eb',0,[],2.5);d0.data=dat;d0.showLine=false;
+    const d1=ds('#dc2626',1.8,[6,4]);d1.data=meanLine;
+    const d2=ds('#059669',1.4,[4,3]);d2.data=zeroLine;
+    chD.data.datasets=[d2,d1,d0];
+    chD.options.scales.x.min=0;chD.options.scales.x.max=show-1;
+    chD.options.scales.y.min=-4;chD.options.scales.y.max=4;
+    chD.update();
+
+    let ot='<tr><th>項目</th><th style="text-align:right;">この回の値</th><th style="text-align:right;">真の値</th></tr>';
+    ot+='<tr><td>標本平均 x̄</td><td class="num">'+nf(xbar,4)+'</td><td class="num">0</td></tr>';
+    ot+='<tr><td>標本分散 s²</td><td class="num">'+nf(svar,4)+'</td><td class="num">1</td></tr>';
+    ot+='<tr><td>標本標準偏差 s</td><td class="num">'+nf(Math.sqrt(svar),4)+'</td><td class="num">1</td></tr>';
+    document.getElementById('one-table').innerHTML=ot;
+    document.getElementById('one-table').insertAdjacentHTML('afterend','');
+
+    // --- 2000回くり返し ---
+    const rng2=makeRng(seed^0x9e3779b9);
+    const means=new Float64Array(TRIALS), varis=new Float64Array(TRIALS);
+    for(let t=0;t<TRIALS;t++){
+      let a=0,b=0;
+      const buf=new Float64Array(N);
+      for(let k=0;k<N;k++){const v=sample(rng2);buf[k]=v;a+=v;}
+      const mb=a/N;
+      for(let k=0;k<N;k++)b+=(buf[k]-mb)*(buf[k]-mb);
+      means[t]=mb;varis[t]=b/Math.max(N-1,1);
+    }
+    function stat(arr){
+      let s=0,q=0;
+      for(let k=0;k<arr.length;k++)s+=arr[k];
+      const m=s/arr.length;
+      for(let k=0;k<arr.length;k++)q+=(arr[k]-m)*(arr[k]-m);
+      return {mean:m,sd:Math.sqrt(q/arr.length)};
+    }
+    const sm=stat(means), sv=stat(varis);
+    const thM=1/Math.sqrt(N), thV=Math.sqrt(2/Math.max(N-1,1));
+
+    document.getElementById('s-mean').textContent=nf(sm.sd,4);
+    document.getElementById('s-mean-sub').innerHTML='理論 σ/√N = '+nf(thM,4);
+    document.getElementById('s-var').textContent=nf(sv.sd,4);
+    document.getElementById('s-var-sub').innerHTML='理論 σ²√(2/(N−1)) = '+nf(thV,4)+'（正規分布の場合）';
+
+    // --- ヒストグラム ---
+    const RANGE=1.2;
+    const BINS=41;
+    const hist=new Array(BINS).fill(0);
+    for(let t=0;t<TRIALS;t++){
+      let b=Math.floor((means[t]+RANGE)/(2*RANGE)*BINS);
+      if(b<0)b=0;if(b>=BINS)b=BINS-1;
+      hist[b]++;
+    }
+    const labels=[],zline=[];
+    for(let b=0;b<BINS;b++){
+      const c=-RANGE+(b+0.5)*(2*RANGE/BINS);
+      labels.push(nf(c,2));
+      zline.push(null);
+    }
+    const zi=Math.floor(BINS/2);
+    chH.data.labels=labels;
+    chH.data.datasets[0].data=hist;
+    const hmax=Math.max.apply(null,hist);
+    const zl=new Array(BINS).fill(null);
+    zl[zi]=hmax;zl[zi]=hmax;
+    chH.data.datasets[1].data=zl;
+    chH.update();
+
+    document.getElementById('hist-note').textContent=
+      '幅が ±'+nf(RANGE,1)+' の範囲で表示しています。N を増やすと山が中央（真の平均 0）に向かって'+
+      '細く高くなります。現在の山の幅（標準偏差）は '+nf(sm.sd,4)+'。'+
+      (dist!=='norm'?'元の分布が正規でなくても、標本平均の分布は正規分布に近い釣鐘形になります（中心極限定理）。':'');
+
+    // --- 1/√N カーブ ---
+    const cM=[],cT=[],cC=[];
+    for(let k=2;k<=12;k++){
+      const n=Math.pow(2,k);
+      const rr=makeRng(seed^(0x5bf03635+k));
+      const mm=new Float64Array(400);
+      for(let t=0;t<400;t++){
+        let a=0;
+        for(let j=0;j<n;j++)a+=sample(rr);
+        mm[t]=a/n;
+      }
+      const st=stat(mm);
+      cM.push({x:n,y:st.sd});
+      cT.push({x:n,y:1/Math.sqrt(n)});
+    }
+    cC.push({x:N,y:0.004});cC.push({x:N,y:0.8});
+    const e0=ds('#2563eb',1.8,[6,4]);e0.data=cT;
+    const e1=ds('#059669',2.3,[],3);e1.data=cM;
+    const e2=ds('#dc2626',1.5,[4,3]);e2.data=cC;
+    chC.data.datasets=[e0,e1,e2];
+    chC.options.scales.x.min=4;chC.options.scales.x.max=4096;
+    chC.options.scales.y.min=0.004;chC.options.scales.y.max=0.8;
+    chC.update();
+
+    // --- 判定 ---
+    const v=document.getElementById('verdict');
+    if(N<=16){
+      v.className='verdict ng';
+      v.innerHTML='N = '+N+'：データが少なく、標本平均は真の値 0 から <strong>±'+nf(2*sm.sd,2)+' 程度まで外れます</strong>。'+
+        '1回の測定結果だけでは信用できません。';
+    }else if(N<=256){
+      v.className='verdict warn';
+      v.innerHTML='N = '+N+'：ばらつきは '+nf(sm.sd,4)+' まで減りましたが、まだ無視できません。';
+    }else{
+      v.className='verdict ok';
+      v.innerHTML='N = '+N+'：ばらつきは '+nf(sm.sd,4)+' と小さくなりました。'+
+        'ただし N を 4 倍にしてもばらつきは半分にしかならない点に注意してください。';
+    }
+
+    // --- 表 ---
+    let html='<tr><th>項目</th><th style="text-align:right;">実測（2000回）</th><th style="text-align:right;">理論</th></tr>';
+    html+='<tr><td>標本平均の平均</td><td class="num">'+nf(sm.mean,4)+'</td><td class="num">0</td></tr>';
+    html+='<tr><td>標本平均の標準偏差</td><td class="num">'+nf(sm.sd,4)+'</td><td class="num">'+nf(thM,4)+'</td></tr>';
+    html+='<tr><td>標本分散の平均</td><td class="num">'+nf(sv.mean,4)+'</td><td class="num">1（不偏）</td></tr>';
+    html+='<tr><td>標本分散の標準偏差</td><td class="num">'+nf(sv.sd,4)+'</td><td class="num">'+nf(thV,4)+'</td></tr>';
+    html+='<tr><td>N を 4 倍にしたときのばらつき</td><td class="num" colspan="2">'+nf(thM,4)+' → '+nf(1/Math.sqrt(4*N),4)+'（半分）</td></tr>';
+    document.getElementById('num-table').innerHTML=html;
+  }
+
+  slN.addEventListener('input',render);
+  document.getElementById('b-reroll').addEventListener('click',function(){
+    seed=(seed*1103515245+12345)>>>0;render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

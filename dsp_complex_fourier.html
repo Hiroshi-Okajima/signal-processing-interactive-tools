@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>複素フーリエ級数と回転ベクトル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#164e63,#0891b2,#67e8f9);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:790px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#ecfeff,#cffafe);border:1.5px solid #67e8f9;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#164e63;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem;padding:0.1em 0.6em;border-radius:7px;min-width:5em;text-align:center;color:#0e7490;background:#fff;border:1.5px solid #67e8f9;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;background:linear-gradient(90deg,#cffafe,#22d3ee);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#0e7490;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#0e7490;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.42rem;}
+.opt{padding:0.52em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.78rem;font-weight:700;color:var(--text2);line-height:1.4;}
+.opt.active{border-color:#0891b2;background:#ecfeff;color:#0e7490;}
+.opt:hover{border-color:#0891b2;}
+.opt .sub{display:block;font-weight:400;font-size:0.63rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#cplane{display:block;width:100%;}
+.chart-wrap{position:relative;height:195px;}
+.chart-wrap.sm{height:155px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.dot{width:10px;height:10px;border-radius:50%;}
+.sw.dash{height:0;border-top:2px dashed;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.78rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.3rem 0.42rem;border:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;background:#f8fafc;text-align:center;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.81rem;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.48em 1.05em;border:none;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#0e7490;color:#fff;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.key-box{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1.5px solid #5eead4;border-radius:var(--r);padding:0.65rem 0.9rem;font-size:0.84rem;line-height:1.75;color:#134e4a;margin-top:0.5rem;font-weight:700;}
+.insight{background:linear-gradient(135deg,#ecfeff,#cffafe);border:1px solid #67e8f9;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#164e63;}
+.insight strong{color:#0e7490;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>複素フーリエ級数と回転ベクトル</h1>
+  <p>正と負の周波数で回る2つのベクトルが対になって、実数の波形を描き出す</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- WAVE SELECT -->
+  <div class="card">
+    <div class="card-label" style="color:#0891b2;">対象の波形と項数</div>
+    <div class="opt-grid">
+      <div class="opt active" id="w-sin" onclick="setWave('sin')">正弦波<span class="sub">n = ±1 のみ</span></div>
+      <div class="opt" id="w-sq" onclick="setWave('sq')">方形波<span class="sub">奇数次</span></div>
+      <div class="opt" id="w-saw" onclick="setWave('saw')">鋸歯状波<span class="sub">全次数</span></div>
+    </div>
+    <div class="preset-row">
+      <span style="font-size:0.74rem;color:var(--text2);align-self:center;">使う項数：</span>
+      <button class="btn-sm" onclick="setK(1)">±1</button>
+      <button class="btn-sm" onclick="setK(2)">±2まで</button>
+      <button class="btn-sm" onclick="setK(3)">±3まで</button>
+      <button class="btn-sm" onclick="setK(5)">±5まで</button>
+      <button class="btn-sm" onclick="setK(8)">±8まで</button>
+    </div>
+    <div class="eq" style="margin-top:0.5rem;" id="eq-box"></div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">時間 t（周期で正規化）</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-t" min="0" max="1" step="0.002" value="0.08">
+      <span class="ctrl-val" id="val-t">0.080</span>
+    </div>
+    <div class="range-scale"><span>0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1</span></div>
+    <div class="btn-row">
+      <button class="btn btn-p" id="b-anim">▶ 自動で回す</button>
+      <button class="btn" id="b-trace">軌跡を消す</button>
+    </div>
+  </div>
+
+  <!-- COMPLEX PLANE -->
+  <div class="card">
+    <div class="card-label" style="color:#0891b2;">複素平面：回転ベクトルの連結</div>
+    <div class="canvas-wrap"><canvas id="cplane"></canvas></div>
+    <div class="legend-row" style="margin-top:0.35rem;">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>正の周波数 n &gt; 0（反時計回り）</span>
+      <span class="legend-item"><span class="sw" style="background:#dc2626;"></span>負の周波数 n &lt; 0（時計回り）</span>
+      <span class="legend-item"><span class="sw" style="background:#0e7490;height:4px;"></span>合成（先端の位置）</span>
+    </div>
+    <div class="key-box" id="key-box"></div>
+  </div>
+
+  <!-- COMPONENT TABLE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">各成分の値（現在の t）</div>
+    <table class="info-table" id="comp-table"></table>
+  </div>
+
+  <!-- WAVEFORM -->
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">描かれる波形 f(t)</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#0e7490;"></span>合成波形（実部）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>目的の波形</span>
+      <span class="legend-item"><span class="sw dot" style="background:#dc2626;"></span>現在の t</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-wave"></canvas></div>
+    <div class="note">回転ベクトルの先端の<strong>実軸方向の位置</strong>が、そのまま波形の値になります。</div>
+  </div>
+
+  <!-- SPECTRUM -->
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">両側スペクトル |c<sub>n</sub>|</div>
+    <div class="chart-wrap sm"><canvas id="chart-spec"></canvas></div>
+    <div class="note">複素フーリエ級数では<strong>負の周波数</strong>も現れ、実信号なら |c<sub>−n</sub>| = |c<sub>n</sub>| の左右対称になります。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・複素フーリエ級数　f(t) = Σ c<sub>n</sub> e<sup>jnωt</sup>　は、各項が<strong>複素平面を回るベクトル</strong><br>
+    ・e<sup>jnωt</sup> は<strong>反時計回り</strong>、e<sup>−jnωt</sup> は<strong>時計回り</strong>に回る。n が大きいほど速く回る<br>
+    ・実信号では <strong>c<sub>−n</sub> = c<sub>n</sub>* （複素共役）</strong>。この対のおかげで虚部が必ず打ち消され、合成は実軸上の値になる<br>
+    ・これが「<strong>負の周波数</strong>とは何か」の答え：単独では物理的意味を持たないが、正の周波数と対になって実信号を作るために必要<br>
+    ・c<sub>n</sub> e<sup>jnωt</sup> ＋ c<sub>−n</sub> e<sup>−jnωt</sup> ＝ 2|c<sub>n</sub>| cos(nωt + ∠c<sub>n</sub>) となり、実数の余弦波1本に戻る<br>
+    ・三角関数の級数より式が簡潔になり、フーリエ変換への橋渡しとなるのが複素表現の利点
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — 複素フーリエ級数と回転ベクトル</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('cplane'), cx2=cv.getContext('2d');
+  const slT=document.getElementById('sl-t');
+  let wave='sin', KMAX=1, animTimer=null, showTrace=true;
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  window.setK=function(k){KMAX=k;render();};
+  window.setWave=function(w){
+    wave=w;
+    ['sin','sq','saw'].forEach(function(s){
+      document.getElementById('w-'+s).className='opt'+(s===w?' active':'');
+    });
+    if(w==='sin')KMAX=1;
+    render();
+  };
+
+  // 複素係数 c_n （f(t) = Σ c_n e^{j n 2π t}）
+  function cn(n){
+    if(n===0)return {re:0,im:0};
+    const an=Math.abs(n), s=(n>0)?1:-1;
+    if(wave==='sin'){
+      if(an!==1)return {re:0,im:0};
+      // sin(2πt) = (e^{j2πt} - e^{-j2πt})/(2j) → c_{+1} = -j/2, c_{-1} = +j/2
+      return {re:0,im:-s*0.5};
+    }
+    if(wave==='sq'){
+      if(an%2===0)return {re:0,im:0};
+      // (4/π)Σ_odd sin(mωt)/m → c_{±m} = ∓j(2/π)/m
+      return {re:0,im:-s*(2/Math.PI)/an};
+    }
+    // 鋸歯状波 (2/π)Σ(-1)^{n+1} sin(nωt)/n
+    const sign=Math.pow(-1,an+1);
+    return {re:0,im:-s*sign*(1/Math.PI)/an};
+  }
+  function termAt(n,t){
+    const c=cn(n), th=2*Math.PI*n*t;
+    const co=Math.cos(th), si=Math.sin(th);
+    return {re:c.re*co-c.im*si, im:c.re*si+c.im*co};
+  }
+  // 使用する n の並び（±1, ±2, … の順で対にする）
+  function orderList(){
+    const out=[];
+    for(let k=1;k<=KMAX;k++){
+      if(cn(k).re===0&&cn(k).im===0)continue;
+      out.push(k);out.push(-k);
+    }
+    return out;
+  }
+  function target(t){
+    const x=t-Math.floor(t);
+    if(wave==='sin')return Math.sin(2*Math.PI*x);
+    if(wave==='sq')return (x<0.5)?1:-1;
+    return (x<0.5)?2*x:2*x-2;
+  }
+
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    cv.width=r.width; cv.height=Math.round(Math.min(r.width*0.62,420));
+  }
+  resize(); window.addEventListener('resize',function(){resize();render();});
+
+  function drawPlane(t){
+    const W=cv.width,H=cv.height;
+    cx2.clearRect(0,0,W,H);
+    cx2.fillStyle='#fafaf8';cx2.fillRect(0,0,W,H);
+    const ns=orderList();
+    // スケール
+    let tot=0; ns.forEach(function(n){const c=cn(n);tot+=Math.hypot(c.re,c.im);});
+    const R=Math.max(tot,0.6)*1.18;
+    const ox=W*0.42, oy=H*0.5, sc=Math.min(W*0.33,H*0.42)/R;
+    function PX(x){return ox+x*sc;}
+    function PY(y){return oy-y*sc;}
+
+    // グリッド・軸
+    cx2.strokeStyle='#e5e7eb';cx2.lineWidth=1;
+    for(let g=-3;g<=3;g+=0.5){
+      cx2.beginPath();cx2.moveTo(PX(g),0);cx2.lineTo(PX(g),H);cx2.stroke();
+      cx2.beginPath();cx2.moveTo(0,PY(g));cx2.lineTo(W,PY(g));cx2.stroke();
+    }
+    cx2.strokeStyle='#334155';cx2.lineWidth=1.6;
+    cx2.beginPath();cx2.moveTo(0,PY(0));cx2.lineTo(W,PY(0));cx2.stroke();
+    cx2.beginPath();cx2.moveTo(PX(0),0);cx2.lineTo(PX(0),H);cx2.stroke();
+    cx2.fillStyle='#475569';cx2.font="11px 'Noto Sans JP'";cx2.textAlign='left';
+    cx2.fillText('Re',W-26,PY(0)-7);cx2.fillText('Im',PX(0)+6,13);
+
+    // 円（各ベクトルの回転半径）
+    let px=0,py=0;
+    cx2.strokeStyle='rgba(148,163,184,0.45)';cx2.lineWidth=1;
+    ns.forEach(function(n){
+      const c=cn(n), r=Math.hypot(c.re,c.im);
+      cx2.beginPath();cx2.arc(PX(px),PY(py),r*sc,0,2*Math.PI);cx2.stroke();
+      const v=termAt(n,t);
+      px+=v.re;py+=v.im;
+    });
+
+    // 軌跡（1周ぶん）
+    if(showTrace){
+      cx2.strokeStyle='rgba(14,116,144,0.35)';cx2.lineWidth=1.4;
+      cx2.beginPath();
+      for(let i=0;i<=360;i++){
+        const tt=i/360;
+        let sx=0,sy=0;
+        ns.forEach(function(n){const v=termAt(n,tt);sx+=v.re;sy+=v.im;});
+        if(i===0)cx2.moveTo(PX(sx),PY(sy));else cx2.lineTo(PX(sx),PY(sy));
+      }
+      cx2.stroke();
+    }
+
+    // ベクトル連結
+    function arrow(x0,y0,x1,y1,col,lw){
+      cx2.strokeStyle=col;cx2.lineWidth=lw;
+      cx2.beginPath();cx2.moveTo(x0,y0);cx2.lineTo(x1,y1);cx2.stroke();
+      const a=Math.atan2(y1-y0,x1-x0), h=6+lw;
+      cx2.fillStyle=col;
+      cx2.beginPath();
+      cx2.moveTo(x1,y1);
+      cx2.lineTo(x1-h*Math.cos(a-0.4),y1-h*Math.sin(a-0.4));
+      cx2.lineTo(x1-h*Math.cos(a+0.4),y1-h*Math.sin(a+0.4));
+      cx2.closePath();cx2.fill();
+    }
+    px=0;py=0;
+    ns.forEach(function(n){
+      const v=termAt(n,t);
+      const nx=px+v.re, ny=py+v.im;
+      arrow(PX(px),PY(py),PX(nx),PY(ny),(n>0)?'#2563eb':'#dc2626',2);
+      px=nx;py=ny;
+    });
+    // 合成ベクトル
+    arrow(PX(0),PY(0),PX(px),PY(py),'#0e7490',3.4);
+    // 実軸への投影
+    cx2.strokeStyle='rgba(220,38,38,0.65)';cx2.lineWidth=1.6;cx2.setLineDash([5,4]);
+    cx2.beginPath();cx2.moveTo(PX(px),PY(py));cx2.lineTo(PX(px),PY(0));cx2.stroke();
+    cx2.setLineDash([]);
+    cx2.fillStyle='#dc2626';
+    cx2.beginPath();cx2.arc(PX(px),PY(0),6,0,2*Math.PI);cx2.fill();
+    cx2.strokeStyle='#fff';cx2.lineWidth=1.5;
+    cx2.beginPath();cx2.arc(PX(px),PY(0),6,0,2*Math.PI);cx2.stroke();
+    cx2.fillStyle='#991b1b';cx2.font="bold 11px 'JetBrains Mono'";cx2.textAlign='center';
+    cx2.fillText('f(t)='+nf(px,3),PX(px),PY(0)+20);
+
+    return {re:px,im:py};
+  }
+
+  function ds(color,w,dash,pr){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:(pr===undefined?0:pr),fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chW=mkChart('chart-wave','時間 t','振幅');
+  const chS=new Chart(document.getElementById('chart-spec').getContext('2d'),{
+    type:'bar',
+    data:{labels:[],datasets:[{data:[],backgroundColor:[]}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{
+        x:{title:{display:true,text:'次数 n（負の周波数を含む）',font:{size:10}},ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{display:false}},
+        y:{title:{display:true,text:'|cn|',font:{size:10}},beginAtZero:true,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  function render(){
+    const t=parseFloat(slT.value);
+    document.getElementById('val-t').textContent=nf(t,3);
+
+    // 式
+    let eq='f(t) = Σ c<sub>n</sub> e<sup>jn·2πt</sup>　（n = −'+KMAX+' … +'+KMAX+'）<br>';
+    if(wave==='sin')eq+='正弦波：c<sub>+1</sub> = −j/2、c<sub>−1</sub> = +j/2　→　互いに複素共役';
+    else if(wave==='sq')eq+='方形波：c<sub>±m</sub> = ∓j(2/π)/m（m は奇数）';
+    else eq+='鋸歯状波：c<sub>±n</sub> = ∓j(−1)<sup>n+1</sup>/(πn)';
+    document.getElementById('eq-box').innerHTML=eq;
+
+    const sum=drawPlane(t);
+
+    // キーボックス
+    document.getElementById('key-box').innerHTML=
+      '合成ベクトル = '+nf(sum.re,4)+(sum.im>=0?' + ':' − ')+nf(Math.abs(sum.im),4)+'j　'+
+      '→　<strong>虚部が '+(Math.abs(sum.im)<1e-9?'ちょうど 0':'ほぼ 0（'+sum.im.toExponential(1)+'）')+
+      '</strong>　正と負の周波数が共役の対になっているため、虚部は必ず打ち消されます。';
+
+    // 成分表
+    const ns=orderList();
+    let html='<tr><th>n</th><th>c<sub>n</sub></th><th>c<sub>n</sub>e<sup>jnωt</sup>（現在）</th><th>回転</th></tr>';
+    for(let k=1;k<=KMAX;k++){
+      const c=cn(k);
+      if(c.re===0&&c.im===0)continue;
+      [k,-k].forEach(function(n){
+        const cc=cn(n), v=termAt(n,t);
+        html+='<tr><td style="text-align:center;color:'+(n>0?'#2563eb':'#dc2626')+';font-weight:700;">'+(n>0?'+':'')+n+'</td>'+
+          '<td class="num">'+nf(cc.re,3)+(cc.im>=0?' + ':' − ')+nf(Math.abs(cc.im),3)+'j</td>'+
+          '<td class="num">'+nf(v.re,3)+(v.im>=0?' + ':' − ')+nf(Math.abs(v.im),3)+'j</td>'+
+          '<td style="text-align:center;font-size:0.72rem;">'+(n>0?'反時計回り':'時計回り')+'</td></tr>';
+      });
+    }
+    html+='<tr style="background:#ecfeff;"><td style="text-align:center;font-weight:700;">合計</td><td></td>'+
+      '<td class="num" style="color:#0e7490;">'+nf(sum.re,4)+(sum.im>=0?' + ':' − ')+nf(Math.abs(sum.im),4)+'j</td>'+
+      '<td style="text-align:center;font-size:0.72rem;">実数になる</td></tr>';
+    document.getElementById('comp-table').innerHTML=html;
+
+    // 波形
+    const wD=[],tD=[],pD=[];
+    for(let i=0;i<=400;i++){
+      const tt=i/400;
+      let s=0;
+      ns.forEach(function(n){s+=termAt(n,tt).re;});
+      wD.push({x:tt,y:s});
+      tD.push({x:tt,y:target(tt)});
+    }
+    pD.push({x:t,y:sum.re});
+    const a0=ds('#94a3b8',1.6,[6,4]);a0.data=tD;
+    const a1=ds('#0e7490',2.6);a1.data=wD;
+    const a2=ds('#dc2626',0,[],6);a2.data=pD;a2.showLine=false;
+    chW.data.datasets=[a0,a1,a2];
+    chW.options.scales.x.min=0;chW.options.scales.x.max=1;
+    chW.options.scales.y.min=-1.4;chW.options.scales.y.max=1.4;
+    chW.update();
+
+    // スペクトル
+    const labels=[],vals=[],cols=[];
+    for(let n=-8;n<=8;n++){
+      labels.push(String(n));
+      const c=cn(n), a=Math.hypot(c.re,c.im);
+      const on=(Math.abs(n)<=KMAX&&a>0);
+      vals.push(on?a:0);
+      cols.push(n>0?'#2563eb':(n<0?'#dc2626':'#cbd5e1'));
+    }
+    chS.data.labels=labels;
+    chS.data.datasets[0].data=vals;
+    chS.data.datasets[0].backgroundColor=cols;
+    chS.update();
+  }
+
+  slT.addEventListener('input',function(){stopAnim();render();});
+  function stopAnim(){
+    if(animTimer){clearInterval(animTimer);animTimer=null;
+      document.getElementById('b-anim').textContent='▶ 自動で回す';}
+  }
+  document.getElementById('b-anim').addEventListener('click',function(){
+    if(animTimer){stopAnim();return;}
+    this.textContent='■ 停止';
+    animTimer=setInterval(function(){
+      let v=parseFloat(slT.value)+0.004;
+      if(v>1)v-=1;
+      slT.value=v.toFixed(3);
+      render();
+    },30);
+  });
+  document.getElementById('b-trace').addEventListener('click',function(){
+    showTrace=!showTrace;
+    this.textContent=showTrace?'軌跡を消す':'軌跡を表示';
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

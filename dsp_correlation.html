@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>相関関数による信号の検出</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#052e16,#15803d,#4ade80);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:770px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#14532d;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem;padding:0.1em 0.6em;border-radius:7px;min-width:5.4em;text-align:center;color:#15803d;background:#fff;border:1.5px solid #86efac;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;
+  background:linear-gradient(90deg,#fca5a5 0%,#fcd34d 40%,#86efac 100%);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#15803d;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#15803d;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.range-legend{display:flex;gap:1.1rem;font-size:0.72rem;margin-top:0.35rem;flex-wrap:wrap;}
+.range-legend .sw{width:16px;height:9px;border-radius:3px;display:inline-block;margin-right:0.25rem;vertical-align:middle;}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.45rem;}
+.mode-opt{padding:0.6em 0.5em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.82rem;font-weight:700;color:var(--text2);line-height:1.45;}
+.mode-opt.active{border-color:#15803d;background:#f0fdf4;color:#14532d;}
+.mode-opt:hover{border-color:#15803d;}
+.mode-opt .sub{display:block;font-weight:400;font-size:0.65rem;color:var(--text3);margin-top:0.12rem;}
+.chart-wrap{position:relative;height:200px;}
+.chart-wrap.sm{height:165px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.verdict{border-radius:var(--r);padding:0.7rem 1rem;font-size:0.9rem;font-weight:700;margin-top:0.6rem;line-height:1.72;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1.5px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1.5px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.33rem 0.45rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.66rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.81rem;}
+.hit{color:#059669;font-weight:700;}
+.miss{color:#dc2626;font-weight:700;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.45em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#15803d;color:#fff;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.insight{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#052e16;}
+.insight strong{color:#15803d;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>相関関数による信号の検出</h1>
+  <p>雑音に埋もれて目には見えない信号が、相関をとると浮かび上がる</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- MODE -->
+  <div class="card">
+    <div class="card-label" style="color:#15803d;">何を検出するか</div>
+    <div class="mode-grid">
+      <div class="mode-opt active" id="m-auto" onclick="setMode('auto')">自己相関で周期を見つける<span class="sub">正弦波が隠れているか／その周期は</span></div>
+      <div class="mode-opt" id="m-cross" onclick="setMode('cross')">相互相関で遅れを測る<span class="sub">レーダー・ソナーの原理</span></div>
+    </div>
+    <div class="eq" style="margin-top:0.55rem;" id="mode-eq"></div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">雑音の大きさ（SN比）</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-snr" min="-30" max="20" step="0.5" value="10">
+      <span class="ctrl-val" id="val-snr">+10.0</span>
+      <span style="font-weight:700;color:#14532d;">dB</span>
+    </div>
+    <div class="range-scale"><span>−30</span><span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span></div>
+    <div class="range-legend">
+      <span><span class="sw" style="background:#86efac;"></span>SN比が高い：目で見える</span>
+      <span><span class="sw" style="background:#fcd34d;"></span>0 dB 付近：信号と雑音が同じ大きさ</span>
+      <span><span class="sw" style="background:#fca5a5;"></span>SN比が低い：目では見えない</span>
+    </div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setSNR(10)">+10 dB</button>
+      <button class="btn-sm" onclick="setSNR(0)">0 dB（信号＝雑音）</button>
+      <button class="btn-sm" onclick="setSNR(-10)">−10 dB</button>
+      <button class="btn-sm" onclick="setSNR(-20)">−20 dB（ほぼ雑音）</button>
+      <button class="btn-sm" id="b-reroll">🎲 雑音を引き直す</button>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <!-- OBSERVED -->
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">観測される波形（これだけを見て信号が分かりますか？）</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#dc2626;"></span>観測波形（信号＋雑音）</span>
+      <span class="legend-item" id="lg-true"><span class="sw dash" style="border-color:#94a3b8;"></span>隠れている信号（答え）</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-obs"></canvas></div>
+    <div class="btn-row">
+      <button class="btn btn-p" id="b-reveal">答えの信号を表示／非表示</button>
+    </div>
+  </div>
+
+  <!-- CORRELATION -->
+  <div class="card">
+    <div class="card-label" style="color:#15803d;" id="corr-title">相関関数</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#15803d;"></span>相関関数</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#2563eb;"></span>真の値（答え）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#ea580c;"></span>検出した位置</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-corr"></canvas></div>
+    <div class="note" id="corr-note"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">検出結果</div>
+    <table class="info-table" id="res-table"></table>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・<strong>自己相関関数</strong> R(τ) = E[x(t)x(t+τ)] は、信号を τ だけずらした自分自身との似ている度合い<br>
+    ・雑音は<strong>自分自身としか相関しない</strong>ため τ=0 にしかピークが立たず、τ≠0 では打ち消し合って消える<br>
+    ・一方で周期信号は<strong>周期ごとに自分と一致する</strong>ため、τ = 周期 の位置に必ずピークが残る<br>
+    ・この性質により、時間波形では完全に埋もれている信号でも<strong>周期を取り出せる</strong><br>
+    ・<strong>相互相関関数</strong>では、送った信号と受けた信号の似ている位置から<strong>遅れ時間</strong>が分かる（レーダー・ソナー・GPSの原理）<br>
+    ・この原理を使えば、未知のシステムに雑音を入力して<strong>インパルス応答を推定</strong>できる（相関法によるシステム同定、第14回）
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — 相関関数による信号の検出</div>
+
+<script>
+(function(){
+  const slS=document.getElementById('sl-snr');
+  let mode='auto', showTrue=false, seed=12345;
+
+  const N=2048, FS=100.0;
+  const F0=5.0;                 // 自己相関モードの信号周波数（周期 0.2 s = 20 サンプル）
+  const TRUE_DELAY=37;          // 相互相関モードの真の遅延（サンプル）
+
+  function nf(v,n){
+    n=(n===undefined)?2:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  // 再現性のある擬似乱数（箱マーラー法）
+  function makeRng(s){
+    let st=s>>>0;
+    return function(){
+      st=(st*1664525+1013904223)>>>0;
+      return st/4294967296;
+    };
+  }
+  function gauss(rng){
+    let u=0,v=0;
+    while(u===0)u=rng();
+    while(v===0)v=rng();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+
+  window.setSNR=function(v){slS.value=v;render();};
+  window.setMode=function(m){
+    mode=m;
+    document.getElementById('m-auto').className='mode-opt'+(m==='auto'?' active':'');
+    document.getElementById('m-cross').className='mode-opt'+(m==='cross'?' active':'');
+    render();
+  };
+
+  function ds(color,w,dash){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chObs=mkChart('chart-obs','時間 t [s]','振幅');
+  const chCorr=mkChart('chart-corr','ずらし量 τ','相関');
+
+  function render(){
+    const snrDb=parseFloat(slS.value);
+    document.getElementById('val-snr').textContent=(snrDb>=0?'+':'')+nf(snrDb,1);
+
+    const rng=makeRng(seed);
+    let obs=new Float64Array(N), sigTrue=new Float64Array(N), ref=null;
+
+    if(mode==='auto'){
+      document.getElementById('mode-eq').innerHTML=
+        '隠された信号：周波数 '+F0+' Hz の正弦波（周期 0.2 s ＝ 20 サンプル）<br>'+
+        '自己相関　R(τ) = (1/N) Σ x(k) x(k+τ)　→　τ = 周期 にピークが立つ';
+      for(let k=0;k<N;k++)sigTrue[k]=Math.sin(2*Math.PI*F0*k/FS);
+    }else{
+      document.getElementById('mode-eq').innerHTML=
+        '送信信号：白色雑音（M系列のような広帯域信号）<br>'+
+        '受信信号：送信信号が '+TRUE_DELAY+' サンプル遅れて返ってくる＋雑音<br>'+
+        '相互相関　R<sub>xy</sub>(τ) = (1/N) Σ y(k) x(k−τ)　→　τ = 遅れ にピークが立つ';
+      ref=new Float64Array(N);
+      for(let k=0;k<N;k++)ref[k]=gauss(rng);
+      for(let k=0;k<N;k++)sigTrue[k]=(k>=TRUE_DELAY)?ref[k-TRUE_DELAY]:0;
+    }
+    // 信号パワー
+    let Ps=0; for(let k=0;k<N;k++)Ps+=sigTrue[k]*sigTrue[k];
+    Ps/=N;
+    const sigma=Math.sqrt(Ps/Math.pow(10,snrDb/10));
+    for(let k=0;k<N;k++)obs[k]=sigTrue[k]+sigma*gauss(rng);
+
+    // ---- 観測波形 ----
+    const obsD=[],trueD=[];
+    for(let k=0;k<N;k++){
+      const t=k/FS;
+      obsD.push({x:t,y:obs[k]});
+      trueD.push({x:t,y:sigTrue[k]});
+    }
+    const o0=ds('#dc2626',1.3);o0.data=obsD;
+    const sets=[o0];
+    if(showTrue){const o1=ds('#94a3b8',2,[6,4]);o1.data=trueD;sets.push(o1);}
+    chObs.data.datasets=sets;
+    chObs.options.scales.x.min=0;chObs.options.scales.x.max=N/FS;
+    let lo=-2,hi=2;
+    obsD.forEach(function(p){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);});
+    chObs.options.scales.y.min=lo*1.05;chObs.options.scales.y.max=hi*1.05;
+    chObs.update();
+    document.getElementById('lg-true').style.display=showTrue?'flex':'none';
+
+    // ---- 相関 ----
+    const MAXLAG=120;
+    const corrD=[],trueLineD=[],estLineD=[];
+    let best=0,bestV=-1e18;
+    const corr=new Float64Array(MAXLAG+1);
+    if(mode==='auto'){
+      // 偏りのある推定（÷N）：長いラグでの分散増大を抑える
+      for(let L=0;L<=MAXLAG;L++){
+        let s=0;
+        for(let k=0;k+L<N;k++)s+=obs[k]*obs[k+L];
+        corr[L]=s/N;
+      }
+      const r0=corr[0]||1;
+      // 移動平均で平滑化してから peak を探す（雑音による偽ピーク対策）
+      const W=9, half=(W-1)/2;
+      const sm=new Float64Array(MAXLAG+1);
+      for(let L=0;L<=MAXLAG;L++){
+        let s=0,c2=0;
+        for(let j=-half;j<=half;j++){
+          const q=L+j;
+          if(q>=0&&q<=MAXLAG){s+=corr[q];c2++;}
+        }
+        sm[L]=s/c2;
+      }
+      for(let L=0;L<=MAXLAG;L++)corrD.push({x:L,y:corr[L]/r0});
+      // 最初にゼロを下回ったあと、最初の極大を周期とする
+      let i=1;
+      while(i<=MAXLAG&&sm[i]>0)i++;
+      best=0;
+      while(i<MAXLAG){
+        if(sm[i]>sm[i-1]&&sm[i]>=sm[i+1]&&sm[i]>0){best=i;break;}
+        i++;
+      }
+      if(best===0){
+        for(let L=8;L<=MAXLAG;L++){if(corr[L]>bestV){bestV=corr[L];best=L;}}
+      }
+    }else{
+      for(let L=0;L<=MAXLAG;L++){
+        let s=0,c=0;
+        for(let k=L;k<N;k++){s+=obs[k]*ref[k-L];c++;}
+        corr[L]=s/c;
+      }
+      let mabs=1e-12;
+      for(let L=0;L<=MAXLAG;L++)mabs=Math.max(mabs,Math.abs(corr[L]));
+      for(let L=0;L<=MAXLAG;L++)corrD.push({x:L,y:corr[L]/mabs});
+      for(let L=0;L<=MAXLAG;L++){if(corr[L]>bestV){bestV=corr[L];best=L;}}
+    }
+    const trueVal=(mode==='auto')?Math.round(FS/F0):TRUE_DELAY;
+    for(const y of [-1.3,1.3]){trueLineD.push({x:trueVal,y:y});estLineD.push({x:best,y:y});}
+
+    const c0=ds('#15803d',2.2);c0.data=corrD;
+    const c1=ds('#2563eb',1.6,[5,4]);c1.data=trueLineD;
+    const c2=ds('#ea580c',1.6,[3,3]);c2.data=estLineD;
+    chCorr.data.datasets=[c0,c1,c2];
+    chCorr.options.scales.x.min=0;chCorr.options.scales.x.max=MAXLAG;
+    chCorr.options.scales.y.min=-1.25;chCorr.options.scales.y.max=1.25;
+    chCorr.update();
+
+    document.getElementById('corr-title').textContent=(mode==='auto')?'自己相関関数 R(τ)':'相互相関関数 R(τ)';
+    document.getElementById('corr-note').textContent=(mode==='auto')
+      ? 'τ=0 は必ず 1 になります（自分自身との相関）。注目すべきは τ=20 付近の2つ目のピークです。雑音成分は τ≠0 で消えます。'
+      : '雑音は参照信号と無相関なので平らになり、遅れの位置だけに鋭いピークが立ちます。';
+
+    // ---- 結果 ----
+    const err=Math.abs(best-trueVal);
+    const ok=(err<=2);
+    let html='<tr><th>項目</th><th style="text-align:right;">値</th></tr>';
+    html+='<tr><td>SN比</td><td class="num">'+(snrDb>=0?'+':'')+nf(snrDb,1)+' dB</td></tr>';
+    html+='<tr><td>信号の実効値</td><td class="num">'+nf(Math.sqrt(Ps),3)+'</td></tr>';
+    html+='<tr><td>雑音の標準偏差 σ</td><td class="num">'+nf(sigma,3)+'</td></tr>';
+    if(mode==='auto'){
+      html+='<tr><td>真の周期</td><td class="num">'+trueVal+' サンプル（'+nf(trueVal/FS,3)+' s）</td></tr>';
+      html+='<tr><td><strong>相関から推定した周期</strong></td><td class="num">'+best+' サンプル（'+nf(best/FS,3)+' s）</td></tr>';
+      html+='<tr><td>推定した周波数</td><td class="num">'+nf(FS/best,2)+' Hz（真値 '+F0+' Hz）</td></tr>';
+    }else{
+      html+='<tr><td>真の遅れ</td><td class="num">'+trueVal+' サンプル（'+nf(trueVal/FS,3)+' s）</td></tr>';
+      html+='<tr><td><strong>相関から推定した遅れ</strong></td><td class="num">'+best+' サンプル（'+nf(best/FS,3)+' s）</td></tr>';
+    }
+    html+='<tr><td>誤差</td><td class="num">'+err+' サンプル　'+(ok?'<span class="hit">✓ 検出成功</span>':'<span class="miss">✗ 検出失敗</span>')+'</td></tr>';
+    document.getElementById('res-table').innerHTML=html;
+
+    // ---- 判定 ----
+    const v=document.getElementById('verdict');
+    if(snrDb>=10){
+      v.className='verdict ok';
+      v.innerHTML='SN比 '+nf(snrDb,1)+' dB：<strong>時間波形でも信号が見えます</strong>。相関を使うまでもない状況です。';
+    }else if(snrDb>=0){
+      v.className='verdict warn';
+      v.innerHTML='SN比 '+nf(snrDb,1)+' dB：信号と雑音が同程度。<strong>時間波形では判別が難しく</strong>なってきました。'+
+        '相関関数ではまだ明瞭にピークが見えます。';
+    }else{
+      v.className='verdict '+(ok?'ok':'ng');
+      v.innerHTML='SN比 '+nf(snrDb,1)+' dB：<strong>時間波形では信号がまったく見えません</strong>。'+
+        (ok? 'それでも相関関数は正しく'+(mode==='auto'?'周期':'遅れ')+'を検出しています（誤差 '+err+' サンプル）。'
+           : 'ここまで雑音が大きいと、相関でも検出が不安定になります（誤差 '+err+' サンプル）。');
+    }
+  }
+
+  slS.addEventListener('input',render);
+  document.getElementById('b-reveal').addEventListener('click',function(){showTrue=!showTrue;render();});
+  document.getElementById('b-reroll').addEventListener('click',function(){seed=(seed*1103515245+12345)>>>0;render();});
+
+  render();
+})();
+</script>
+</body>
+</html>

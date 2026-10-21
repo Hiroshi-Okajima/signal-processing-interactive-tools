@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ピリオドグラムとWelchの方法</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#431407,#c2410c,#fdba74);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:810px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1.5px solid #fdba74;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#7c2d12;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.35rem;padding:0.1em 0.6em;border-radius:7px;min-width:3.4em;text-align:center;color:#c2410c;background:#fff;border:1.5px solid #fdba74;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;background:linear-gradient(90deg,#fed7aa,#f97316);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#c2410c;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#c2410c;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.45rem;}
+.opt{padding:0.55em 0.45em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.79rem;font-weight:700;color:var(--text2);line-height:1.45;}
+.opt.active{border-color:#c2410c;background:#fff7ed;color:#7c2d12;}
+.opt:hover{border-color:#c2410c;}
+.opt .sub{display:block;font-weight:400;font-size:0.64rem;color:var(--text3);margin-top:0.1rem;}
+.chart-wrap{position:relative;height:235px;}
+.chart-wrap.sm{height:155px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.trade-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;margin-top:0.5rem;}
+@media(max-width:600px){.trade-grid{grid-template-columns:1fr;}}
+.trade{border-radius:var(--r);padding:0.6rem 0.8rem;border:1.5px solid;}
+.trade.good{background:#ecfdf5;border-color:#6ee7b7;color:#065f46;}
+.trade.bad{background:#fef2f2;border-color:#fca5a5;color:#991b1b;}
+.trade .ttl{font-size:0.68rem;font-weight:700;letter-spacing:0.05em;opacity:0.85;}
+.trade .val{font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:700;}
+.trade .sub{font-size:0.72rem;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.79rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.32rem 0.45rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.81rem;}
+.verdict{border-radius:var(--r);padding:0.68rem 0.95rem;font-size:0.87rem;font-weight:700;margin-top:0.55rem;line-height:1.72;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1.5px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1.5px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.45em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#c2410c;color:#fff;}
+.insight{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fdba74;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#431407;}
+.insight strong{color:#c2410c;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.seg-bar{display:flex;height:26px;border-radius:6px;overflow:hidden;border:1px solid var(--border);margin-top:0.4rem;}
+.seg{flex:1;border-right:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:0.62rem;font-weight:700;color:#fff;background:#f97316;}
+.seg:last-child{border-right:none;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>ピリオドグラムとWelchの方法</h1>
+  <p>データを分割して平均するとスペクトルは滑らかになる。ただし何かを失っている</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- SIGNAL -->
+  <div class="card">
+    <div class="card-label" style="color:#c2410c;">対象の信号（全データ長 N = 2048）</div>
+    <div class="opt-grid">
+      <div class="opt active" id="s-white" onclick="setSig('white')">白色雑音だけ<span class="sub">真のPSDは一定（平坦）</span></div>
+      <div class="opt" id="s-two" onclick="setSig('two')">近接した2つの正弦波＋雑音<span class="sub">f = 0.100 と 0.115</span></div>
+    </div>
+    <div class="eq" style="margin-top:0.5rem;" id="sig-box"></div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">分割数 K（いくつの区間に分けて平均するか）</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-k" min="0" max="6" step="1" value="0">
+      <span class="ctrl-val" id="val-k">1</span>
+      <span style="font-weight:700;color:#7c2d12;">分割</span>
+    </div>
+    <div class="range-scale"><span>1</span><span>2</span><span>4</span><span>8</span><span>16</span><span>32</span><span>64</span></div>
+    <div class="seg-bar" id="seg-bar"></div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setK(0)">K=1（ピリオドグラム）</button>
+      <button class="btn-sm" onclick="setK(2)">K=4</button>
+      <button class="btn-sm" onclick="setK(4)">K=16</button>
+      <button class="btn-sm" onclick="setK(6)">K=64</button>
+    </div>
+    <div class="trade-grid">
+      <div class="trade good">
+        <div class="ttl">得られるもの：推定のばらつき</div>
+        <div class="val" id="t-var">—</div>
+        <div class="sub" id="t-var-sub">—</div>
+      </div>
+      <div class="trade bad">
+        <div class="ttl">失うもの：周波数分解能</div>
+        <div class="val" id="t-res">—</div>
+        <div class="sub" id="t-res-sub">—</div>
+      </div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <!-- SPECTRUM -->
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">パワースペクトル密度の推定</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#c2410c;"></span>K 分割の平均（Welch）</span>
+      <span class="legend-item"><span class="sw" style="background:#cbd5e1;"></span>K=1（単一ピリオドグラム）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#059669;"></span>真のPSD</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-psd"></canvas></div>
+    <div class="note" id="psd-note"></div>
+  </div>
+
+  <!-- ZOOM for two-tone -->
+  <div class="card" id="zoom-card">
+    <div class="card-label" style="color:var(--purple);">2つの成分の付近を拡大</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#c2410c;"></span>K 分割の平均</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#2563eb;"></span>真の周波数 f = 0.100, 0.115</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-zoom"></canvas></div>
+    <div class="note" id="zoom-note"></div>
+  </div>
+
+  <!-- VARIANCE CURVE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">分割数と推定のばらつき</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#059669;"></span>実測の標準偏差</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#2563eb;"></span>理論 1/√K</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>現在の K</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-var"></canvas></div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">数値</div>
+    <table class="info-table" id="num-table"></table>
+    <div class="btn-row">
+      <button class="btn btn-p" id="b-reroll">🎲 データを取り直す</button>
+    </div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・<strong>ピリオドグラム</strong>（K=1）は、データ長をいくら増やしても<strong>ばらつきが減らない</strong>。これは推定量として一致性がないため<br>
+    ・<strong>Welchの方法</strong>：データを K 個の区間に分け、それぞれのピリオドグラムを<strong>平均</strong>する。分散が 1/K、標準偏差が <strong>1/√K</strong> になる<br>
+    ・しかし1区間の長さが N/K に短くなるため、<strong>周波数分解能は K 倍粗く</strong>なる<br>
+    ・<strong>滑らかさと分解能はトレードオフ</strong>。近接した2つの成分を分離したいなら K を小さく、雑音のPSDを滑らかに推定したいなら K を大きく<br>
+    ・各区間には<strong>窓関数</strong>（ここではハニング窓）をかけてスペクトル漏れを抑える。実際の Welch 法では区間を重ねる（オーバーラップ）のが一般的<br>
+    ・ウィーナー・ヒンチンの定理により、PSD は自己相関関数のフーリエ変換と一致する
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — ピリオドグラムとWelchの方法</div>
+
+<script>
+(function(){
+  const slK=document.getElementById('sl-k');
+  const N=2048;
+  const F1=0.100, F2=0.115;
+  let sigType='white', seed=777;
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  window.setK=function(i){slK.value=i;render();};
+  window.setSig=function(s){
+    sigType=s;
+    ['white','two'].forEach(function(k){
+      document.getElementById('s-'+k).className='opt'+(k===s?' active':'');
+    });
+    document.getElementById('zoom-card').style.display=(s==='two')?'block':'none';
+    render();
+  };
+
+  function makeRng(s){
+    let st=s>>>0;
+    return function(){st=(st*1664525+1013904223)>>>0;return st/4294967296;};
+  }
+  function gauss(rng){
+    let u=0,v=0;
+    while(u===0)u=rng();
+    while(v===0)v=rng();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+  function makeSignal(){
+    const rng=makeRng(seed), x=new Float64Array(N);
+    for(let n=0;n<N;n++){
+      let v=gauss(rng);
+      if(sigType==='two')v+=0.8*Math.sin(2*Math.PI*F1*n)+0.6*Math.sin(2*Math.PI*F2*n);
+      x[n]=v;
+    }
+    return x;
+  }
+
+  // ---- FFT ----
+  function fft(re,im){
+    const n=re.length;
+    for(let i=1,j=0;i<n;i++){
+      let bit=n>>1;
+      for(;j&bit;bit>>=1)j^=bit;
+      j^=bit;
+      if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}
+    }
+    for(let len=2;len<=n;len<<=1){
+      const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+      for(let i=0;i<n;i+=len){
+        let cr=1,ci=0;
+        for(let k=0;k<len/2;k++){
+          const ur=re[i+k],ui=im[i+k];
+          const vr=re[i+k+len/2]*cr-im[i+k+len/2]*ci;
+          const vi=re[i+k+len/2]*ci+im[i+k+len/2]*cr;
+          re[i+k]=ur+vr;im[i+k]=ui+vi;
+          re[i+k+len/2]=ur-vr;im[i+k+len/2]=ui-vi;
+          const ncr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=ncr;
+        }
+      }
+    }
+  }
+  // Welch 推定（K 分割・ハニング窓）
+  function welch(x,K){
+    const L=Math.floor(N/K);
+    const half=L/2;
+    const acc=new Float64Array(half+1);
+    // 窓とそのパワー
+    const w=new Float64Array(L);
+    let U=0;
+    for(let i=0;i<L;i++){w[i]=0.5-0.5*Math.cos(2*Math.PI*i/(L-1));U+=w[i]*w[i];}
+    U/=L;
+    for(let k=0;k<K;k++){
+      const re=new Float64Array(L), im=new Float64Array(L);
+      for(let i=0;i<L;i++)re[i]=x[k*L+i]*w[i];
+      fft(re,im);
+      for(let i=0;i<=half;i++){
+        acc[i]+=(re[i]*re[i]+im[i]*im[i])/(L*U);
+      }
+    }
+    for(let i=0;i<=half;i++)acc[i]/=K;
+    return {P:acc,L:L};
+  }
+  // ばらつき（白色部分の標準偏差／平均）
+  function spread(P,L,excludePeaks){
+    let s=0,s2=0,c=0;
+    for(let i=1;i<P.length-1;i++){
+      const f=i/L;
+      if(excludePeaks&&((Math.abs(f-F1)<0.02)||(Math.abs(f-F2)<0.02)))continue;
+      s+=P[i];s2+=P[i]*P[i];c++;
+    }
+    const m=s/c;
+    return {mean:m,sd:Math.sqrt(Math.max(s2/c-m*m,0))};
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chP=mkChart('chart-psd','正規化周波数 f','PSD [dB]');
+  const chZ=mkChart('chart-zoom','正規化周波数 f','PSD');
+  const chV=mkChart('chart-var','分割数 K','標準偏差 / 平均');
+
+  function render(){
+    const Ki=parseInt(slK.value,10);
+    const K=Math.pow(2,Ki);
+    document.getElementById('val-k').textContent=String(K);
+
+    const x=makeSignal();
+    const W=welch(x,K);
+    const W1=welch(x,1);
+    const L=W.L;
+
+    document.getElementById('sig-box').innerHTML=
+      (sigType==='white'
+        ? '白色雑音（分散 1）のみ。<strong>真のPSDは全周波数で一定</strong>なので、推定のばらつきがそのまま見えます。'
+        : '白色雑音（分散 1）＋ 2つの正弦波（f = '+nf(F1,3)+' と '+nf(F2,3)+'、間隔 '+nf(F2-F1,3)+'）')+
+      '<br>全データ長 N = '+N+'　→　1区間 L = N/K = <strong>'+L+'</strong> 点';
+
+    // セグメントバー
+    let sb='';
+    const showSeg=Math.min(K,16);
+    for(let i=0;i<showSeg;i++){
+      sb+='<div class="seg">'+(K<=16?('区間'+(i+1)):'')+'</div>';
+    }
+    if(K>16)sb='<div class="seg" style="flex:1;">'+K+' 個の区間に分割（各 '+L+' 点）</div>';
+    document.getElementById('seg-bar').innerHTML=sb;
+
+    // --- PSD グラフ ---
+    const pD=[],p1D=[],trueD=[];
+    for(let i=1;i<W.P.length;i++){
+      const f=i/L;
+      pD.push({x:f,y:10*Math.log10(Math.max(W.P[i],1e-8))});
+      trueD.push({x:f,y:0});
+    }
+    for(let i=1;i<W1.P.length;i++){
+      const f=i/W1.L;
+      p1D.push({x:f,y:10*Math.log10(Math.max(W1.P[i],1e-8))});
+    }
+    const a0=ds('#cbd5e1',1);a0.data=p1D;
+    const a1=ds('#059669',1.6,[6,4]);a1.data=trueD;
+    const a2=ds('#c2410c',2.2);a2.data=pD;
+    chP.data.datasets=(K===1)?[a1,a2]:[a0,a1,a2];
+    chP.options.scales.x.min=0;chP.options.scales.x.max=0.5;
+    chP.options.scales.y.min=-30;chP.options.scales.y.max=(sigType==='two')?25:15;
+    chP.update();
+
+    // --- ばらつき ---
+    const sp=spread(W.P,L,sigType==='two');
+    const sp1=spread(W1.P,W1.L,sigType==='two');
+    const ratio=sp.sd/sp.mean;
+
+    document.getElementById('t-var').textContent=nf(ratio,3);
+    document.getElementById('t-var-sub').innerHTML=
+      '標準偏差 ÷ 平均（K=1 では約 1.0）<br>理論：1/√K = '+nf(1/Math.sqrt(K),3);
+    const res=1/L;
+    document.getElementById('t-res').textContent=nf(res,5);
+    document.getElementById('t-res-sub').innerHTML=
+      '1区間 '+L+' 点 → ビン幅 1/'+L+'<br>K=1 のときの '+K+' 倍粗い';
+
+    // --- ズーム（2成分） ---
+    if(sigType==='two'){
+      const zD=[],l1=[],l2=[];
+      for(let i=1;i<W.P.length;i++){
+        const f=i/L;
+        if(f>=0.06&&f<=0.17)zD.push({x:f,y:W.P[i]});
+      }
+      let zmax=1;
+      zD.forEach(function(p){zmax=Math.max(zmax,p.y);});
+      l1.push({x:F1,y:0});l1.push({x:F1,y:zmax*1.1});
+      l2.push({x:F2,y:0});l2.push({x:F2,y:zmax*1.1});
+      const b0=ds('#2563eb',1.4,[4,3]);b0.data=l1;
+      const b1=ds('#2563eb',1.4,[4,3]);b1.data=l2;
+      const b2=ds('#c2410c',2.4);b2.data=zD;
+      chZ.data.datasets=[b0,b1,b2];
+      chZ.options.scales.x.min=0.06;chZ.options.scales.x.max=0.17;
+      chZ.options.scales.y.min=0;chZ.options.scales.y.max=zmax*1.1;
+      chZ.update();
+
+      const sep=(F2-F1)>2*res;
+      document.getElementById('zoom-note').textContent=
+        sep? '分解能 '+nf(res,5)+' に対し成分間隔は '+nf(F2-F1,3)+'。2つの山として分離できています。'
+           : '分解能 '+nf(res,5)+' が成分間隔 '+nf(F2-F1,3)+' より粗いため、2つの成分が1つの山に融合してしまいました。';
+    }
+
+    // --- 分散カーブ ---
+    const vD=[],tD=[],cD=[];
+    for(let i=0;i<=6;i++){
+      const kk=Math.pow(2,i);
+      const Wk=welch(x,kk);
+      const s=spread(Wk.P,Wk.L,sigType==='two');
+      vD.push({x:kk,y:s.sd/s.mean});
+      tD.push({x:kk,y:1/Math.sqrt(kk)});
+    }
+    cD.push({x:K,y:0});cD.push({x:K,y:1.4});
+    const c0=ds('#2563eb',1.6,[5,4]);c0.data=tD;
+    const c1=ds('#059669',2.3);c1.data=vD;
+    const c2=ds('#dc2626',1.5,[4,3]);c2.data=cD;
+    chV.data.datasets=[c0,c1,c2];
+    chV.options.scales.x.min=1;chV.options.scales.x.max=64;
+    chV.options.scales.y.min=0;chV.options.scales.y.max=1.4;
+    chV.update();
+
+    // --- 判定 ---
+    const v=document.getElementById('verdict');
+    if(K===1){
+      v.className='verdict ng';
+      v.innerHTML='K = 1：これが<strong>ピリオドグラム</strong>です。推定値が激しくばらつき、真のPSD（緑の破線）の形がほとんど読み取れません。'+
+        'データ長を増やしてもこのばらつきは減りません。';
+    }else if(sigType==='two'&&(F2-F1)<=2*res){
+      v.className='verdict warn';
+      v.innerHTML='K = '+K+'：スペクトルは滑らかになりましたが、<strong>2つの成分が分離できなくなりました</strong>。分割しすぎです。';
+    }else{
+      v.className='verdict ok';
+      v.innerHTML='K = '+K+'：'+K+' 個の区間を平均したことで、ばらつきが '+nf(sp1.sd/sp1.mean,3)+' → <strong>'+nf(ratio,3)+'</strong> に減りました。';
+    }
+
+    document.getElementById('psd-note').textContent=
+      (K===1)? '激しいギザギザは「雑音」ではなく、推定そのもののばらつきです。'
+             : '灰色が K=1 の結果、橙色が K='+K+' で平均した結果です。平均によって滑らかになっています。';
+
+    // --- 表 ---
+    let html='<tr><th>項目</th><th style="text-align:right;">値</th></tr>';
+    html+='<tr><td>全データ長 N</td><td class="num">'+N+'</td></tr>';
+    html+='<tr><td>分割数 K</td><td class="num">'+K+'</td></tr>';
+    html+='<tr><td>1区間の長さ L = N/K</td><td class="num">'+L+' 点</td></tr>';
+    html+='<tr><td>周波数分解能（ビン幅）</td><td class="num">1/'+L+' = '+nf(res,5)+'</td></tr>';
+    html+='<tr><td>推定のばらつき（実測）</td><td class="num">'+nf(ratio,4)+'</td></tr>';
+    html+='<tr><td>理論値 1/√K</td><td class="num">'+nf(1/Math.sqrt(K),4)+'</td></tr>';
+    html+='<tr><td>推定値の平均</td><td class="num">'+nf(sp.mean,4)+'（真値 1.0）</td></tr>';
+    document.getElementById('num-table').innerHTML=html;
+  }
+
+  slK.addEventListener('input',render);
+  document.getElementById('b-reroll').addEventListener('click',function(){
+    seed=(seed*1103515245+12345)>>>0;render();
+  });
+
+  window.setSig('white');
+})();
+</script>
+</body>
+</html>

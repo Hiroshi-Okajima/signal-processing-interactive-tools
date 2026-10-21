@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>窓関数とスペクトル漏れ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#7c2d12,#c2410c,#fb923c);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:780px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1.5px solid #fdba74;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#7c2d12;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem;padding:0.1em 0.6em;border-radius:7px;min-width:5.2em;text-align:center;color:#c2410c;background:#fff;border:1.5px solid #fdba74;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;background:#fed7aa;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#c2410c;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#c2410c;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.win-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.42rem;}
+@media(max-width:640px){.win-grid{grid-template-columns:1fr 1fr;}}
+.win-opt{padding:0.55em 0.35em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.78rem;font-weight:700;color:var(--text2);line-height:1.4;}
+.win-opt.active{border-color:#c2410c;background:#fff7ed;color:#7c2d12;}
+.win-opt:hover{border-color:#c2410c;}
+.win-opt .sub{display:block;font-weight:400;font-size:0.62rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.chart-wrap{position:relative;height:215px;}
+.chart-wrap.sm{height:160px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.verdict{border-radius:var(--r);padding:0.7rem 1rem;font-size:0.9rem;font-weight:700;margin-top:0.6rem;line-height:1.72;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1.5px solid #6ee7b7;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.79rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.33rem 0.45rem;border:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;background:#f8fafc;text-align:center;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.info-table tr.cur td{background:#fff7ed;outline:2px solid #fdba74;outline-offset:-2px;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.8rem;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.insight{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fdba74;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#7c2d12;}
+.insight strong{color:#c2410c;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>窓関数とスペクトル漏れ</h1>
+  <p>信号の周波数が DFT の格子にぴったり乗らないと、スペクトルが周囲へ漏れ出す</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">信号の周波数（ビン単位：データ長 N=256 の中に入る波の数）</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-f" min="8" max="16" step="0.05" value="10">
+      <span class="ctrl-val" id="val-f">10.00</span>
+      <span style="font-weight:700;color:#7c2d12;">ビン</span>
+    </div>
+    <div class="range-scale"><span>8</span><span>10</span><span>12</span><span>14</span><span>16</span></div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setF(10)">10.00（整数＝漏れなし）</button>
+      <button class="btn-sm" onclick="setF(10.25)">10.25</button>
+      <button class="btn-sm" onclick="setF(10.5)">10.50（最悪＝半端のど真ん中）</button>
+      <button class="btn-sm" onclick="setF(11)">11.00（整数）</button>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <!-- WINDOW SELECT -->
+  <div class="card">
+    <div class="card-label" style="color:#c2410c;">窓関数の種類</div>
+    <div class="win-grid">
+      <div class="win-opt active" id="w-rect" onclick="setWin('rect')">矩形窓<span class="sub">窓なしと同じ</span></div>
+      <div class="win-opt" id="w-hann" onclick="setWin('hann')">ハニング窓<span class="sub">最も標準的</span></div>
+      <div class="win-opt" id="w-hamming" onclick="setWin('hamming')">ハミング窓<span class="sub">サイドローブ小</span></div>
+      <div class="win-opt" id="w-blackman" onclick="setWin('blackman')">ブラックマン窓<span class="sub">漏れ最小</span></div>
+    </div>
+    <div class="eq" style="margin-top:0.5rem;" id="win-eq"></div>
+  </div>
+
+  <!-- TIME -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">切り出した信号と窓</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#94a3b8;"></span>元の信号</span>
+      <span class="legend-item"><span class="sw" style="background:#c2410c;"></span>窓関数</span>
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>窓をかけた信号</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-time"></canvas></div>
+    <div class="note" id="time-note"></div>
+  </div>
+
+  <!-- SPECTRUM -->
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">スペクトル（対数表示）</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#c2410c;"></span>現在の窓</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>矩形窓（比較用）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#2563eb;"></span>信号の真の周波数</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-spec"></canvas></div>
+    <div class="note">縦軸は最大値を 0 dB とした相対値。ピークの裾がどこまで広がるかが「漏れ」です。</div>
+  </div>
+
+  <!-- WINDOW SPECTRUM -->
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">窓関数そのもののスペクトル</div>
+    <div class="chart-wrap sm"><canvas id="chart-wspec"></canvas></div>
+    <div class="note">中央の山が<strong>メインローブ</strong>（幅＝周波数分解能）、両脇の小さな山が<strong>サイドローブ</strong>（漏れの原因）。</div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">窓関数の性能比較</div>
+    <table class="info-table" id="cmp-table"></table>
+    <div class="note">分解能（メインローブが狭い）とサイドローブ（漏れが小さい）は<strong>両立しません</strong>。用途に応じた選択が必要です。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・DFT は切り出した区間が<strong>周期的に繰り返す</strong>と仮定する。信号の周波数が区間に整数個入らないと、繋ぎ目が不連続になり<strong>スペクトル漏れ</strong>が生じる<br>
+    ・漏れは、周波数がビンの<strong>ちょうど中間（×.5）</strong>のときに最も大きくなる<br>
+    ・窓関数は信号の両端を滑らかに 0 へ落とし、繋ぎ目の不連続をなくして漏れを抑える<br>
+    ・<strong>矩形窓</strong>：メインローブが最も狭く<strong>分解能が高い</strong>が、サイドローブ −13 dB と漏れが大きい<br>
+    ・<strong>ブラックマン窓</strong>：サイドローブ −58 dB と漏れが小さいが、メインローブが広く<strong>分解能が落ちる</strong><br>
+    ・この<strong>分解能とサイドローブのトレードオフ</strong>が窓関数選択の本質。近接した2つの成分を分離したいなら矩形寄り、小さな成分を大きな成分の近くで見つけたいならブラックマン寄り
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — 窓関数とスペクトル漏れ</div>
+
+<script>
+(function(){
+  const slF=document.getElementById('sl-f');
+  let winType='rect';
+  const N=256, ZP=8;              // ゼロ詰め倍率（滑らかな表示用）
+  const NFFT=N*ZP;
+
+  function nf(v,n){
+    n=(n===undefined)?2:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  window.setF=function(v){slF.value=v;render();};
+  window.setWin=function(w){
+    winType=w;
+    ['rect','hann','hamming','blackman'].forEach(function(k){
+      document.getElementById('w-'+k).className='win-opt'+(k===w?' active':'');
+    });
+    render();
+  };
+
+  const WINS={
+    rect:{name:'矩形窓', eq:'w(n) = 1', side:-13.3, main:2.0},
+    hann:{name:'ハニング窓', eq:'w(n) = 0.5 − 0.5 cos(2πn/(N−1))', side:-31.5, main:4.0},
+    hamming:{name:'ハミング窓', eq:'w(n) = 0.54 − 0.46 cos(2πn/(N−1))', side:-42.7, main:4.0},
+    blackman:{name:'ブラックマン窓', eq:'w(n) = 0.42 − 0.5 cos(2πn/(N−1)) + 0.08 cos(4πn/(N−1))', side:-58.1, main:6.0}
+  };
+  function winVal(type,n){
+    const d=N-1;
+    if(type==='rect')return 1;
+    if(type==='hann')return 0.5-0.5*Math.cos(2*Math.PI*n/d);
+    if(type==='hamming')return 0.54-0.46*Math.cos(2*Math.PI*n/d);
+    return 0.42-0.5*Math.cos(2*Math.PI*n/d)+0.08*Math.cos(4*Math.PI*n/d);
+  }
+
+  // ---- FFT (radix-2) ----
+  function fft(re,im){
+    const n=re.length;
+    for(let i=1,j=0;i<n;i++){
+      let bit=n>>1;
+      for(;j&bit;bit>>=1)j^=bit;
+      j^=bit;
+      if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}
+    }
+    for(let len=2;len<=n;len<<=1){
+      const ang=-2*Math.PI/len;
+      const wr=Math.cos(ang), wi=Math.sin(ang);
+      for(let i=0;i<n;i+=len){
+        let cr=1,ci=0;
+        for(let k=0;k<len/2;k++){
+          const ur=re[i+k], ui=im[i+k];
+          const vr=re[i+k+len/2]*cr-im[i+k+len/2]*ci;
+          const vi=re[i+k+len/2]*ci+im[i+k+len/2]*cr;
+          re[i+k]=ur+vr; im[i+k]=ui+vi;
+          re[i+k+len/2]=ur-vr; im[i+k+len/2]=ui-vi;
+          const ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr;
+        }
+      }
+    }
+  }
+  function magDb(sig){
+    const re=new Float64Array(NFFT), im=new Float64Array(NFFT);
+    for(let i=0;i<sig.length;i++)re[i]=sig[i];
+    fft(re,im);
+    const half=NFFT/2;
+    const out=new Float64Array(half);
+    let mx=1e-30;
+    for(let i=0;i<half;i++){
+      out[i]=Math.hypot(re[i],im[i]);
+      if(out[i]>mx)mx=out[i];
+    }
+    for(let i=0;i<half;i++)out[i]=20*Math.log10(Math.max(out[i]/mx,1e-10));
+    return out;
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chT=mkChart('chart-time','サンプル番号 n','振幅');
+  const chS=mkChart('chart-spec','周波数（ビン）','[dB]');
+  const chW=mkChart('chart-wspec','ビン','[dB]');
+
+  function render(){
+    const f=parseFloat(slF.value);
+    document.getElementById('val-f').textContent=nf(f,2);
+    const W=WINS[winType];
+    document.getElementById('win-eq').innerHTML=
+      '<strong>'+W.name+'</strong>　'+W.eq+'<br>'+
+      'サイドローブ '+nf(W.side,1)+' dB ／ メインローブ幅 '+nf(W.main,0)+' ビン';
+
+    // --- time domain ---
+    const sig=new Float64Array(N), wv=new Float64Array(N), wsig=new Float64Array(N);
+    for(let n=0;n<N;n++){
+      sig[n]=Math.sin(2*Math.PI*f*n/N);
+      wv[n]=winVal(winType,n);
+      wsig[n]=sig[n]*wv[n];
+    }
+    const sD=[],wD=[],wsD=[];
+    for(let n=0;n<N;n++){
+      sD.push({x:n,y:sig[n]});wD.push({x:n,y:wv[n]});wsD.push({x:n,y:wsig[n]});
+    }
+    const t0=ds('#94a3b8',1.2);t0.data=sD;
+    const t1=ds('#c2410c',2);t1.data=wD;
+    const t2=ds('#2563eb',1.8);t2.data=wsD;
+    chT.data.datasets=[t0,t1,t2];
+    chT.options.scales.x.min=0;chT.options.scales.x.max=N;
+    chT.options.scales.y.min=-1.3;chT.options.scales.y.max=1.3;
+    chT.update();
+
+    const frac=Math.abs(f-Math.round(f));
+    document.getElementById('time-note').textContent = (frac<0.005)
+      ? '周波数が整数ビンなので、区間の端と端がきれいに繋がります（繰り返しても不連続になりません）。'
+      : '周波数が整数ビンでないため、区間の終わりと始まりが繋がらず、繰り返すと不連続が生じます。これが漏れの原因です。';
+
+    // --- spectrum ---
+    const curDb=magDb(wsig);
+    const rectSig=new Float64Array(N);
+    for(let n=0;n<N;n++)rectSig[n]=sig[n];
+    const rectDb=magDb(rectSig);
+
+    const LO=Math.max(0,Math.floor((f-8)*ZP)), HI=Math.min(curDb.length-1,Math.ceil((f+8)*ZP));
+    const cD=[],rD=[],fD=[];
+    for(let i=LO;i<=HI;i++){
+      const bin=i/ZP;
+      cD.push({x:bin,y:curDb[i]});
+      rD.push({x:bin,y:rectDb[i]});
+    }
+    fD.push({x:f,y:-110});fD.push({x:f,y:5});
+    const s0=ds('#94a3b8',1.4,[5,4]);s0.data=rD;
+    const s1=ds('#c2410c',2.4);s1.data=cD;
+    const s2=ds('#2563eb',1.5,[4,3]);s2.data=fD;
+    chS.data.datasets=(winType==='rect')?[s1,s2]:[s0,s1,s2];
+    chS.options.scales.x.min=f-8;chS.options.scales.x.max=f+8;
+    chS.options.scales.y.min=-100;chS.options.scales.y.max=5;
+    chS.update();
+
+    // --- window spectrum ---
+    const wDb=magDb(wv);
+    const wsD2=[];
+    const HW=Math.min(wDb.length-1,10*ZP);
+    for(let i=0;i<=HW;i++)wsD2.push({x:i/ZP,y:wDb[i]});
+    const q0=ds('#7c3aed',2.2);q0.data=wsD2;
+    chW.data.datasets=[q0];
+    chW.options.scales.x.min=0;chW.options.scales.x.max=10;
+    chW.options.scales.y.min=-100;chW.options.scales.y.max=5;
+    chW.update();
+
+    // --- 漏れの指標：ピークから 4 ビン以上離れた範囲でのスペクトルの最大値 ---
+    // （特定の 1 点だけを見ると、たまたま零点に当たって極端な値になるため範囲の最大を取る）
+    function leakFar(db){
+      let mx=-999;
+      const lo=Math.round((f+4)*ZP), hi=Math.min(db.length-1,Math.round((f+40)*ZP));
+      for(let i=lo;i<=hi;i++)if(db[i]>mx)mx=db[i];
+      const lo2=Math.max(0,Math.round((f-40)*ZP)), hi2=Math.round((f-4)*ZP);
+      for(let i=lo2;i<=hi2;i++)if(db[i]>mx)mx=db[i];
+      return mx;
+    }
+    const leakCur=leakFar(curDb);
+    const leakRect=leakFar(rectDb);
+
+    // --- verdict ---
+    const v=document.getElementById('verdict');
+    if(frac<0.005){
+      v.className='verdict ok';
+      v.innerHTML='✓ <strong>周波数が整数ビン（'+nf(f,2)+'）</strong>：区間にちょうど '+Math.round(f)+
+        ' 周期入るため漏れは生じず、矩形窓でも 1 本の線になります。';
+    }else{
+      v.className='verdict ng';
+      v.innerHTML='✗ <strong>周波数が整数ビンでない（'+nf(f,2)+'）</strong>：スペクトルが周囲へ漏れます。'+
+        'ピークから 4 ビン以上離れた範囲での最大レベルは '+(winType==='rect'?'':'矩形窓 '+nf(leakRect,1)+' dB → ')+
+        '<strong>'+W.name+' '+nf(leakCur,1)+' dB</strong>'+
+        (winType==='rect'?'':'（'+nf(leakRect-leakCur,1)+' dB 改善）')+'。';
+    }
+
+    // --- comparison table ---
+    let html='<tr><th>窓関数</th><th>最大サイドローブ</th><th>メインローブ幅</th><th>向いている用途</th></tr>';
+    const uses={rect:'近接した成分の分離（分解能重視）',hann:'一般用途の標準',
+      hamming:'サイドローブをやや抑えたい場合',blackman:'小さな成分の検出（漏れ最小）'};
+    ['rect','hann','hamming','blackman'].forEach(function(k){
+      const w=WINS[k];
+      html+='<tr'+(k===winType?' class="cur"':'')+'><td>'+w.name+'</td>'+
+        '<td class="num">'+nf(w.side,1)+' dB</td>'+
+        '<td class="num">'+nf(w.main,0)+' ビン</td>'+
+        '<td style="font-size:0.74rem;">'+uses[k]+'</td></tr>';
+    });
+    document.getElementById('cmp-table').innerHTML=html;
+  }
+
+  slF.addEventListener('input',render);
+  render();
+})();
+</script>
+</body>
+</html>

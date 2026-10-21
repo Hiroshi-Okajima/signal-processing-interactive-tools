@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>z平面の極と応答</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0c0a09,#44403c,#a8a29e);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:790px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#fafaf9,#f5f5f4);border:1.5px solid #a8a29e;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#292524;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.35rem;padding:0.1em 0.6em;border-radius:7px;min-width:4.6em;text-align:center;color:#292524;background:#fff;border:1.5px solid #a8a29e;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;
+  background:linear-gradient(90deg,#86efac 0%,#86efac 66.7%,#fca5a5 66.7%,#fca5a5 100%);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#292524;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#292524;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.range-legend{display:flex;gap:1.1rem;font-size:0.72rem;margin-top:0.35rem;flex-wrap:wrap;}
+.range-legend .sw{width:16px;height:9px;border-radius:3px;display:inline-block;margin-right:0.25rem;vertical-align:middle;}
+.opt-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.42rem;}
+@media(max-width:620px){.opt-grid{grid-template-columns:1fr 1fr;}}
+.opt{padding:0.52em 0.38em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.76rem;font-weight:700;color:var(--text2);line-height:1.4;}
+.opt.active{border-color:#57534e;background:#fafaf9;color:#1c1917;}
+.opt:hover{border-color:#57534e;}
+.opt .sub{display:block;font-weight:400;font-size:0.62rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas{display:block;width:100%;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+@media(max-width:760px){.two-col{grid-template-columns:1fr;}}
+.chart-wrap{position:relative;height:210px;}
+.chart-wrap.sm{height:165px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.verdict{border-radius:var(--r);padding:0.7rem 1rem;font-size:0.9rem;font-weight:700;margin-top:0.6rem;line-height:1.72;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1.5px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1.5px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.79rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.32rem 0.45rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.81rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.insight{background:linear-gradient(135deg,#fafaf9,#f5f5f4);border:1px solid #d6d3d1;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#1c1917;}
+.insight strong{color:#44403c;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>z平面の極と応答</h1>
+  <p>極が単位円の内か外か、実軸上か複素か。その位置が応答の形をすべて決める</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- POLE TYPE -->
+  <div class="card">
+    <div class="card-label" style="color:#57534e;">極の種類（偏角 θ）</div>
+    <div class="opt-grid">
+      <div class="opt active" id="p-0" onclick="setTheta(0)">実軸・正<span class="sub">θ = 0°</span></div>
+      <div class="opt" id="p-180" onclick="setTheta(180)">実軸・負<span class="sub">θ = 180°</span></div>
+      <div class="opt" id="p-45" onclick="setTheta(45)">複素（共役対）<span class="sub">θ = ±45°</span></div>
+      <div class="opt" id="p-90" onclick="setTheta(90)">複素（共役対）<span class="sub">θ = ±90°</span></div>
+    </div>
+    <div class="eq" style="margin-top:0.5rem;" id="tf-box"></div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">極の絶対値 |p|（原点からの距離）</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-r" min="0" max="1.5" step="0.005" value="0.85">
+      <span class="ctrl-val" id="val-r">0.850</span>
+    </div>
+    <div class="range-scale"><span>0</span><span>0.5</span><span>1.0</span><span>1.25</span><span>1.5</span></div>
+    <div class="range-legend">
+      <span><span class="sw" style="background:#86efac;"></span>|p| &lt; 1：単位円の内側＝安定</span>
+      <span><span class="sw" style="background:#fca5a5;"></span>|p| &gt; 1：単位円の外側＝不安定</span>
+    </div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setR(0.5)">|p| = 0.5（速く収束）</button>
+      <button class="btn-sm" onclick="setR(0.95)">|p| = 0.95（ゆっくり収束）</button>
+      <button class="btn-sm" onclick="setR(1.0)">|p| = 1.0（安定限界）</button>
+      <button class="btn-sm" onclick="setR(1.05)">|p| = 1.05（発散）</button>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <!-- Z PLANE + S PLANE -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-label" style="color:#57534e;">z平面（離散時間）</div>
+      <div class="canvas-wrap"><canvas id="zplane"></canvas></div>
+      <div class="note">安定領域は<strong>単位円の内側</strong>。×が極の位置です。</div>
+    </div>
+    <div class="card">
+      <div class="card-label" style="color:var(--purple);">s平面（連続時間）との対応</div>
+      <div class="canvas-wrap"><canvas id="splane"></canvas></div>
+      <div class="note">z = e<sup>sT</sup> の関係。<strong>左半平面 ↔ 単位円内</strong>、<strong>虚軸 ↔ 単位円</strong>。<br>
+      s = ln(z)/T は多価なので、ここでは −π &lt; Im(sT) ≤ π の帯に限って表示しています。</div>
+    </div>
+  </div>
+
+  <!-- IMPULSE RESPONSE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">インパルス応答 h[n]</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#dc2626;"></span>h[n]</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>包絡線 ±|p|ⁿ</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-h"></canvas></div>
+    <div class="note" id="h-note"></div>
+  </div>
+
+  <!-- FREQ RESPONSE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">周波数特性 |H(e<sup>jω</sup>)|</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>振幅特性 [dB]</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>極の偏角 θ（共振周波数）</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-f"></canvas></div>
+    <div class="note">単位円上を ω = 0 → π と進んだときの |H| です。<strong>極に近づくほど山が高く</strong>なります。</div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">数値</div>
+    <table class="info-table" id="num-table"></table>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・1次系 H(z) = 1/(1 − p z⁻¹) のインパルス応答は <strong>h[n] = pⁿ</strong>。等比数列そのもの<br>
+    ・<strong>|p| &lt; 1 で収束、|p| = 1 で持続、|p| &gt; 1 で発散</strong>（BIBO安定性の条件）<br>
+    ・極が<strong>実軸の正</strong>なら単調に減衰、<strong>実軸の負</strong>なら符号が交互に変わりながら減衰<br>
+    ・極が<strong>複素共役対</strong>なら振動しながら減衰し、振動の速さは<strong>偏角 θ</strong>で決まる（周波数 ω = θ）<br>
+    ・|p| が 1 に近いほど<strong>減衰が遅く</strong>、周波数特性の山が<strong>鋭く</strong>なる<br>
+    ・s平面との対応は <strong>z = e<sup>sT</sup></strong>。左半平面（安定）が単位円内に、虚軸が単位円に写される
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — z平面の極と応答</div>
+
+<script>
+(function(){
+  const slR=document.getElementById('sl-r');
+  const cvZ=document.getElementById('zplane'), cz=cvZ.getContext('2d');
+  const cvS=document.getElementById('splane'), cs=cvS.getContext('2d');
+  let thetaDeg=0;
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+  window.setR=function(v){slR.value=v;render();};
+  window.setTheta=function(d){
+    thetaDeg=d;
+    [0,180,45,90].forEach(function(k){
+      document.getElementById('p-'+k).className='opt'+(k===d?' active':'');
+    });
+    render();
+  };
+
+  function isReal(){return thetaDeg===0||thetaDeg===180;}
+
+  // インパルス応答
+  function impulse(r,thDeg,N){
+    const h=new Float64Array(N);
+    if(isReal()){
+      const p=(thDeg===0)?r:-r;
+      for(let n=0;n<N;n++)h[n]=Math.pow(p,n);
+    }else{
+      const th=thDeg*Math.PI/180;
+      for(let n=0;n<N;n++)h[n]=Math.pow(r,n)*Math.sin((n+1)*th)/Math.sin(th);
+    }
+    return h;
+  }
+  // 周波数特性 |H(e^{jw})|
+  function freqMag(r,thDeg,w){
+    const c=Math.cos(w), s=Math.sin(w);
+    if(isReal()){
+      const p=(thDeg===0)?r:-r;
+      // 1/(1 - p e^{-jw})
+      const dr=1-p*c, di=p*s;
+      return 1/Math.hypot(dr,di);
+    }
+    const th=thDeg*Math.PI/180;
+    const a1=-2*r*Math.cos(th), a2=r*r;
+    // 1/(1 + a1 e^{-jw} + a2 e^{-2jw})
+    const dr=1+a1*c+a2*Math.cos(2*w);
+    const di=-a1*s-a2*Math.sin(2*w);
+    return 1/Math.max(Math.hypot(dr,di),1e-12);
+  }
+
+  function resize(){
+    [cvZ,cvS].forEach(function(cv){
+      const r=cv.parentElement.getBoundingClientRect();
+      cv.width=r.width; cv.height=Math.round(Math.min(r.width*0.95,330));
+    });
+  }
+  resize(); window.addEventListener('resize',function(){resize();render();});
+
+  function drawZ(r,thDeg){
+    const W=cvZ.width,H=cvZ.height;
+    cz.clearRect(0,0,W,H);
+    cz.fillStyle='#fef2f2';cz.fillRect(0,0,W,H);
+    const cx=W/2, cy=H/2, R=1.7;
+    const sc=Math.min(W,H)*0.40/R;
+    function PX(x){return cx+x*sc;}
+    function PY(y){return cy-y*sc;}
+    // 安定領域（単位円内）
+    cz.save();
+    cz.beginPath();cz.arc(PX(0),PY(0),sc,0,2*Math.PI);cz.clip();
+    cz.fillStyle='#ecfdf5';cz.fillRect(0,0,W,H);
+    cz.restore();
+    // グリッド
+    cz.strokeStyle='#e5e7eb';cz.lineWidth=1;
+    for(let g=-1.5;g<=1.5;g+=0.5){
+      cz.beginPath();cz.moveTo(PX(g),0);cz.lineTo(PX(g),H);cz.stroke();
+      cz.beginPath();cz.moveTo(0,PY(g));cz.lineTo(W,PY(g));cz.stroke();
+    }
+    cz.strokeStyle='#334155';cz.lineWidth=1.6;
+    cz.beginPath();cz.moveTo(0,PY(0));cz.lineTo(W,PY(0));cz.stroke();
+    cz.beginPath();cz.moveTo(PX(0),0);cz.lineTo(PX(0),H);cz.stroke();
+    // 単位円
+    cz.strokeStyle='#334155';cz.lineWidth=2.4;cz.setLineDash([6,4]);
+    cz.beginPath();cz.arc(PX(0),PY(0),sc,0,2*Math.PI);cz.stroke();cz.setLineDash([]);
+    cz.fillStyle='#065f46';cz.font="10px 'Noto Sans JP'";cz.textAlign='center';
+    cz.fillText('安定（|z|<1）',PX(0),PY(0)-sc*0.45);
+    cz.fillStyle='#991b1b';cz.textAlign='left';
+    cz.fillText('不安定',8,16);
+    cz.fillStyle='#64748b';cz.font="10px 'JetBrains Mono'";cz.textAlign='center';
+    cz.fillText('1',PX(1),PY(0)+14);cz.fillText('-1',PX(-1),PY(0)+14);
+    cz.fillStyle='#475569';cz.font="11px 'Noto Sans JP'";cz.textAlign='left';
+    cz.fillText('Re',W-25,PY(0)-7);cz.fillText('Im',PX(0)+6,13);
+    // 極
+    const th=thDeg*Math.PI/180;
+    const ps=isReal()? [{re:(thDeg===0?r:-r),im:0}]
+                     : [{re:r*Math.cos(th),im:r*Math.sin(th)},{re:r*Math.cos(th),im:-r*Math.sin(th)}];
+    ps.forEach(function(p){
+      const q=[PX(p.re),PY(p.im)];
+      const st=(Math.hypot(p.re,p.im)<1);
+      cz.strokeStyle=st?'#059669':'#dc2626';cz.lineWidth=3.4;
+      const s=9;
+      cz.beginPath();cz.moveTo(q[0]-s,q[1]-s);cz.lineTo(q[0]+s,q[1]+s);cz.stroke();
+      cz.beginPath();cz.moveTo(q[0]-s,q[1]+s);cz.lineTo(q[0]+s,q[1]-s);cz.stroke();
+    });
+    // 原点からの線と偏角
+    if(!isReal()){
+      cz.strokeStyle='rgba(100,116,139,0.6)';cz.lineWidth=1.3;cz.setLineDash([3,3]);
+      cz.beginPath();cz.moveTo(PX(0),PY(0));cz.lineTo(PX(r*Math.cos(th)),PY(r*Math.sin(th)));cz.stroke();
+      cz.setLineDash([]);
+      cz.strokeStyle='rgba(124,58,237,0.7)';cz.lineWidth=2;
+      cz.beginPath();cz.arc(PX(0),PY(0),sc*0.28,0,-th,true);cz.stroke();
+      cz.fillStyle='#6b21a8';cz.font="bold 10px 'JetBrains Mono'";cz.textAlign='left';
+      cz.fillText('θ='+thDeg+'°',PX(0)+sc*0.30,PY(0)-sc*0.10);
+    }
+  }
+
+  function drawS(r,thDeg){
+    const W=cvS.width,H=cvS.height;
+    cs.clearRect(0,0,W,H);
+    cs.fillStyle='#fef2f2';cs.fillRect(0,0,W,H);
+    const cx=W*0.62, cy=H/2;
+    const XR=3.2, YR=Math.PI*1.25;
+    const scx=W*0.55/XR, scy=H*0.42/YR;
+    function PX(x){return cx+x*scx;}
+    function PY(y){return cy-y*scy;}
+    // 左半平面
+    cs.fillStyle='#ecfdf5';cs.fillRect(0,0,PX(0),H);
+    cs.strokeStyle='#e5e7eb';cs.lineWidth=1;
+    for(let g=-3;g<=1;g++){cs.beginPath();cs.moveTo(PX(g),0);cs.lineTo(PX(g),H);cs.stroke();}
+    for(let g=-3;g<=3;g++){cs.beginPath();cs.moveTo(0,PY(g));cs.lineTo(W,PY(g));cs.stroke();}
+    cs.strokeStyle='#334155';cs.lineWidth=1.6;
+    cs.beginPath();cs.moveTo(0,PY(0));cs.lineTo(W,PY(0));cs.stroke();
+    cs.lineWidth=2.4;
+    cs.beginPath();cs.moveTo(PX(0),0);cs.lineTo(PX(0),H);cs.stroke();
+    cs.fillStyle='#065f46';cs.font="10px 'Noto Sans JP'";cs.textAlign='center';
+    cs.fillText('安定（左半平面）',PX(-1.6),16);
+    cs.fillStyle='#991b1b';cs.fillText('不安定',PX(0.8),16);
+    cs.fillStyle='#475569';cs.font="11px 'Noto Sans JP'";cs.textAlign='left';
+    cs.fillText('Re(s)',W-40,PY(0)-7);cs.fillText('Im(s)',PX(0)+6,13);
+    cs.fillStyle='#64748b';cs.font="10px 'JetBrains Mono'";cs.textAlign='center';
+    for(let g=-3;g<=1;g++){if(g===0)continue;cs.fillText(g,PX(g),PY(0)+14);}
+    cs.textAlign='right';
+    cs.fillText('π',PX(0)-5,PY(Math.PI)+3);
+    cs.fillText('-π',PX(0)-5,PY(-Math.PI)+3);
+    // s = ln(z)/T, T=1
+    // 注意：z = r e^{jθ} に対し s = ln r + j(θ + 2πk) と多価になる。
+    //       主値帯 -π < Im(s) ≤ π の中で、実信号に対応する共役対を描く。
+    //       θ=0  : s = ln r のみ（実軸上の1点）
+    //       θ=180: s = ln r ± jπ（帯の上端・下端の2点）
+    //       複素極: s = ln r ± jθ の2点
+    const th=thDeg*Math.PI/180;
+    const sre=(r>1e-9)?Math.log(r):null;
+    let sims;
+    if(thDeg===0)        sims=[0];
+    else if(thDeg===180) sims=[Math.PI,-Math.PI];
+    else                 sims=[th,-th];
+    if(sre!==null){
+      sims.forEach(function(sim){
+        const q=[PX(sre),PY(sim)];
+        cs.strokeStyle=(sre<0)?'#059669':'#dc2626';cs.lineWidth=3.4;
+        const s=9;
+        cs.beginPath();cs.moveTo(q[0]-s,q[1]-s);cs.lineTo(q[0]+s,q[1]+s);cs.stroke();
+        cs.beginPath();cs.moveTo(q[0]-s,q[1]+s);cs.lineTo(q[0]+s,q[1]-s);cs.stroke();
+      });
+      // θ=180 のときは「同じ1つの極」であることを示す注記
+      if(thDeg===180){
+        cs.fillStyle='#64748b';cs.font="9px 'Noto Sans JP'";cs.textAlign='left';
+        cs.fillText('±jπ は同一の極（ln は多価）',PX(sre)+12,PY(Math.PI)+4);
+      }
+    }
+    cs.fillStyle='#475569';cs.font="10px 'JetBrains Mono'";cs.textAlign='center';
+    cs.fillText('s = ln(z) / T　（T = 1）',W/2,H-8);
+  }
+
+  function ds(color,w,dash,pr){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:(pr===undefined?0:pr),fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chH=mkChart('chart-h','離散時刻 n','h[n]');
+  const chF=mkChart('chart-f','ω [rad]（0 〜 π）','|H| [dB]');
+
+  function render(){
+    const r=parseFloat(slR.value);
+    document.getElementById('val-r').textContent=nf(r,3);
+
+    // 伝達関数表示
+    let tf;
+    if(isReal()){
+      const p=(thetaDeg===0)?r:-r;
+      tf='H(z) = <span class="frac"><span class="num">1</span><span class="den">1 '+(p>=0?'− ':'+ ')+nf(Math.abs(p),3)+' z⁻¹</span></span>'+
+         '　極：z = '+nf(p,3);
+    }else{
+      const th=thetaDeg*Math.PI/180;
+      const a1=-2*r*Math.cos(th), a2=r*r;
+      tf='H(z) = <span class="frac"><span class="num">1</span><span class="den">1 '+(a1>=0?'+ ':'− ')+nf(Math.abs(a1),3)+' z⁻¹ + '+nf(a2,3)+' z⁻²</span></span><br>'+
+         '極：z = '+nf(r,3)+' e<sup>±j'+thetaDeg+'°</sup> = '+nf(r*Math.cos(th),3)+' ± '+nf(r*Math.sin(th),3)+'j';
+    }
+    document.getElementById('tf-box').innerHTML=tf;
+
+    // インパルス応答
+    const NH=40;
+    const h=impulse(r,thetaDeg,NH);
+    const hD=[],epD=[],emD=[];
+    let hmax=0;
+    for(let n=0;n<NH;n++){
+      hD.push({x:n,y:h[n]});
+      const e=Math.pow(r,n)*(isReal()?1:1/Math.abs(Math.sin(thetaDeg*Math.PI/180)));
+      epD.push({x:n,y:e});emD.push({x:n,y:-e});
+      hmax=Math.max(hmax,Math.abs(h[n]));
+    }
+    const d0=ds('#94a3b8',1.3,[5,4]);d0.data=epD;
+    const d1=ds('#94a3b8',1.3,[5,4]);d1.data=emD;
+    const d2=ds('#dc2626',2,[],3);d2.data=hD;
+    chH.data.datasets=[d0,d1,d2];
+    chH.options.scales.x.min=0;chH.options.scales.x.max=NH-1;
+    const lim=Math.min(12,Math.max(1.5,hmax*1.15));
+    chH.options.scales.y.min=-lim;chH.options.scales.y.max=lim;
+    chH.update();
+
+    let hn;
+    if(r<0.999){
+      hn=(isReal()?(thetaDeg===0?'単調に 0 へ収束します（h[n] = pⁿ の等比数列）。'
+                                :'符号が交互に変わりながら 0 へ収束します（p が負のため）。')
+                 :'振動しながら 0 へ収束します。振動の周期は 2π/θ ≈ '+nf(360/thetaDeg,1)+' サンプルです。');
+    }else if(r<1.001){
+      hn='|p| = 1 なので減衰も発散もせず、'+(isReal()?(thetaDeg===0?'一定値が続きます。':'±1 が交互に続きます。'):'持続振動になります。');
+    }else{
+      hn='|p| > 1 なので'+(isReal()?'':'振動しながら')+'発散します。';
+    }
+    document.getElementById('h-note').textContent=hn;
+
+    // 周波数特性
+    const fD=[],pkD=[];
+    let dbmax=-1e9,dbmin=1e9;
+    for(let i=0;i<=400;i++){
+      const w=i/400*Math.PI;
+      const db=20*Math.log10(Math.max(freqMag(r,thetaDeg,w),1e-9));
+      fD.push({x:w,y:db});
+      dbmax=Math.max(dbmax,db);dbmin=Math.min(dbmin,db);
+    }
+    const thr=thetaDeg*Math.PI/180;
+    if(!isReal()){pkD.push({x:thr,y:-80});pkD.push({x:thr,y:80});}
+    const f0=ds('#2563eb',2.4);f0.data=fD;
+    const f1=ds('#dc2626',1.5,[4,3]);f1.data=pkD;
+    chF.data.datasets=isReal()?[f0]:[f0,f1];
+    chF.options.scales.x.min=0;chF.options.scales.x.max=Math.PI;
+    chF.options.scales.y.min=Math.max(-50,dbmin-4);
+    chF.options.scales.y.max=Math.min(60,dbmax+4);
+    chF.update();
+
+    // 判定
+    const v=document.getElementById('verdict');
+    if(r<0.999){
+      v.className='verdict ok';
+      v.innerHTML='✓ <strong>安定</strong>：|p| = '+nf(r,3)+' &lt; 1　極が単位円の内側にあり、インパルス応答は 0 に収束します。';
+    }else if(r<1.001){
+      v.className='verdict warn';
+      v.innerHTML='△ <strong>安定限界</strong>：|p| = 1　極が単位円上にあり、応答は減衰も発散もしません。';
+    }else{
+      v.className='verdict ng';
+      v.innerHTML='✗ <strong>不安定</strong>：|p| = '+nf(r,3)+' &gt; 1　極が単位円の外にあり、応答は発散します。';
+    }
+
+    // 数値表
+    const th2=thetaDeg*Math.PI/180;
+    const sre=(r>1e-9)?Math.log(r):-99;
+    let html='<tr><th>項目</th><th style="text-align:right;">値</th></tr>';
+    html+='<tr><td>極の絶対値 |p|</td><td class="num">'+nf(r,4)+'</td></tr>';
+    html+='<tr><td>極の偏角 θ</td><td class="num">'+thetaDeg+'° = '+nf(th2,4)+' rad</td></tr>';
+    let sTxt;
+    if(thetaDeg===0)        sTxt=nf(sre,4);
+    else if(thetaDeg===180) sTxt=nf(sre,4)+' ± '+nf(Math.PI,4)+'j　（同一の極・多価）';
+    else                    sTxt=nf(sre,4)+' ± '+nf(th2,4)+'j';
+    html+='<tr><td>対応する s 平面の点（T=1）</td><td class="num">'+sTxt+'</td></tr>';
+    if(r<0.999){
+      const tau=-1/Math.log(r);
+      html+='<tr><td>時定数（1/e に減衰する n）</td><td class="num">'+nf(tau,2)+' サンプル</td></tr>';
+      html+='<tr><td>5% に減衰する n</td><td class="num">'+nf(Math.log(0.05)/Math.log(r),1)+' サンプル</td></tr>';
+    }
+    if(!isReal()){
+      html+='<tr><td>振動の周期</td><td class="num">'+nf(360/thetaDeg,2)+' サンプル</td></tr>';
+      html+='<tr><td>共振周波数 ω</td><td class="num">'+nf(th2,4)+' rad（正規化）</td></tr>';
+    }
+    html+='<tr><td>|H| の最大値</td><td class="num">'+nf(dbmax,2)+' dB</td></tr>';
+    document.getElementById('num-table').innerHTML=html;
+
+    drawZ(r,thetaDeg);
+    drawS(r,thetaDeg);
+  }
+
+  slR.addEventListener('input',render);
+  render();
+})();
+</script>
+</body>
+</html>

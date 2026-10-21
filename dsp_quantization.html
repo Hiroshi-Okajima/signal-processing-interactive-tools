@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>量子化とビット数</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#1e1b4b,#4338ca,#818cf8);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.92;max-width:780px;margin:0 auto;}
+.main{max-width:1050px;margin:0 auto;padding:1rem;}
+.col{display:flex;flex-direction:column;gap:0.75rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.85rem 1.1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.slider-card{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1.5px solid #a5b4fc;}
+.ctrl-label{font-size:0.85rem;font-weight:700;color:#312e81;margin-bottom:0.3rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.8rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.35rem;padding:0.1em 0.6em;border-radius:7px;min-width:3.6em;text-align:center;color:#4338ca;background:#fff;border:1.5px solid #a5b4fc;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;outline:none;cursor:pointer;background:linear-gradient(90deg,#fca5a5,#fcd34d 35%,#86efac 70%,#86efac 100%);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#4338ca;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#4338ca;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;}
+.range-scale{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text2);margin-top:0.25rem;font-family:'JetBrains Mono',monospace;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;}
+.btn-sm{padding:0.35em 0.75em;font-size:0.73rem;border:none;border-radius:7px;cursor:pointer;background:#e2e8f0;color:#334155;font-weight:700;}
+.btn-sm:hover{background:#cbd5e1;}
+.chart-wrap{position:relative;height:225px;}
+.chart-wrap.sm{height:160px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.3rem;font-size:0.73rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.28rem;}
+.sw{width:16px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.big-stat{display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.5rem;}
+.stat{flex:1;min-width:140px;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.7rem;text-align:center;}
+.stat .lbl{font-size:0.66rem;color:var(--text3);font-weight:700;}
+.stat .val{font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:#4338ca;}
+.stat .sub{font-size:0.66rem;color:var(--text2);}
+.info-table{width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.33rem 0.45rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.66rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right;}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.81rem;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.48em 1.05em;border:none;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:#4338ca;color:#fff;}
+.btn-s{background:var(--green);color:#fff;}
+.insight{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #a5b4fc;border-radius:var(--r);padding:0.65rem 0.95rem;font-size:0.81rem;line-height:1.78;color:#1e1b4b;}
+.insight strong{color:#4338ca;}
+.note{font-size:0.73rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.use-box{background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);padding:0.5rem 0.75rem;font-size:0.78rem;color:#14532d;margin-top:0.45rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>量子化とビット数</h1>
+  <p>A/D変換では振幅が段階的な値に丸められる。ビット数を減らすと何が起きるか</p>
+</div>
+<div class="main">
+<div class="col">
+
+  <!-- SLIDER -->
+  <div class="card slider-card">
+    <div class="ctrl-label">量子化ビット数 n</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-b" min="1" max="16" step="1" value="3">
+      <span class="ctrl-val" id="val-b">3</span>
+      <span style="font-weight:700;color:#312e81;">bit</span>
+    </div>
+    <div class="range-scale"><span>1</span><span>4</span><span>8</span><span>12</span><span>16</span></div>
+    <div class="preset-row">
+      <button class="btn-sm" onclick="setB(1)">1 bit</button>
+      <button class="btn-sm" onclick="setB(3)">3 bit</button>
+      <button class="btn-sm" onclick="setB(8)">8 bit（昔のゲーム機）</button>
+      <button class="btn-sm" onclick="setB(16)">16 bit（音楽CD）</button>
+    </div>
+    <div class="big-stat">
+      <div class="stat"><div class="lbl">段階数 2ⁿ</div><div class="val" id="s-levels">—</div><div class="sub">段階</div></div>
+      <div class="stat"><div class="lbl">量子化ステップ Δ</div><div class="val" id="s-step">—</div><div class="sub">フルスケール 2 に対して</div></div>
+      <div class="stat"><div class="lbl">SN比（実測）</div><div class="val" id="s-snr">—</div><div class="sub">dB</div></div>
+    </div>
+    <div class="use-box" id="use-box"></div>
+  </div>
+
+  <!-- WAVEFORM -->
+  <div class="card">
+    <div class="card-label" style="color:#4338ca;">量子化された波形</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#94a3b8;"></span>元の信号</span>
+      <span class="legend-item"><span class="sw" style="background:#4338ca;"></span>量子化後（階段状）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#e2e8f0;"></span>量子化レベル</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-wave"></canvas></div>
+    <div class="note" id="wave-note"></div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">量子化誤差（量子化後 − 元の信号）</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#dc2626;"></span>誤差 e(t)</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>±Δ/2（誤差の上限）</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-err"></canvas></div>
+    <table class="info-table">
+      <tr><th>項目</th><th style="text-align:right;">実測値</th><th style="text-align:right;">理論値</th></tr>
+      <tr><td>誤差の最大値</td><td class="num" id="r-emax">—</td><td class="num" id="r-emax-t">—</td></tr>
+      <tr><td>誤差の実効値</td><td class="num" id="r-erms">—</td><td class="num" id="r-erms-t">—</td></tr>
+    </table>
+    <div class="note">誤差は ±Δ/2 の範囲に収まり、実効値は Δ/√12 になります（一様分布の標準偏差）。</div>
+  </div>
+
+  <!-- SNR -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">SN比とビット数の関係</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#059669;"></span>実測 SN比</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#2563eb;"></span>理論式 6.02n + 1.76 dB</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>現在のビット数</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-snr"></canvas></div>
+    <div class="eq" style="margin-top:0.45rem;" id="snr-eq"></div>
+  </div>
+
+  <!-- AUDIO -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">音で聴く</div>
+    <div class="btn-row">
+      <button class="btn btn-s" id="b-quant">▶ 量子化した音（n bit）</button>
+      <button class="btn btn-p" id="b-orig">▶ 元の音（16 bit 相当）</button>
+      <button class="btn" id="b-stop">■ 停止</button>
+    </div>
+    <div class="note">440 Hz の正弦波を指定ビット数で量子化して再生します。ビット数を下げると<strong>ざらついた音・歪んだ音</strong>になるのが聴き取れます。8 bit 以下で明瞭に違いが出ます。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・A/D変換では、連続的な振幅を <strong>2ⁿ 段階</strong>の離散値に丸める。この丸めの誤差が<strong>量子化誤差</strong><br>
+    ・量子化ステップは Δ = フルスケール / 2ⁿ。誤差は必ず <strong>±Δ/2 の範囲</strong>に収まる<br>
+    ・誤差が一様分布とみなせるとき、その実効値は <strong>Δ/√12</strong><br>
+    ・正弦波入力でのSN比は <strong>SNR ≈ 6.02n + 1.76 [dB]</strong>。<strong>1 bit 増えるごとに約 6 dB 改善</strong>する<br>
+    ・音楽CDは 16 bit（約98 dB）、電話は 8 bit 相当、計測器では 24 bit も使われる<br>
+    ・ビット数を増やすほど高品質だが、データ量も比例して増えるため用途に応じた選択が必要
+  </div>
+
+</div>
+</div>
+<div class="footer">信号処理 インタラクティブ教材 — 量子化とビット数</div>
+
+<script>
+(function(){
+  const slB=document.getElementById('sl-b');
+  const F0=5.0;        // 表示用の信号周波数（周期数）
+  const N=2000;        // 表示サンプル数
+  const FULL=1.0;      // フルスケール ±1
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    if(v===null||v===undefined||!isFinite(x))return '—';
+    if(Math.abs(x)>0&&Math.abs(x)<1e-4)return x.toExponential(2);
+    return x.toFixed(n);
+  }
+  window.setB=function(v){slB.value=v;render();};
+
+  // mid-riser 型の量子化器：ちょうど 2^n 段階を等間隔に配置する
+  // 出力レベルは (k+0.5)Δ （k = -L/2 … L/2-1）、すなわち ±Δ/2, ±3Δ/2, … ±(FULL-Δ/2)
+  function quantize(x,bits){
+    const L=Math.pow(2,bits);
+    const q=2*FULL/L;
+    let y=(Math.floor(x/q)+0.5)*q;
+    const lim=FULL-q/2;
+    if(y>lim)y=lim;
+    if(y<-lim)y=-lim;
+    return y;
+  }
+  // 量子化レベルの一覧（描画用）
+  function levels(bits){
+    const L=Math.pow(2,bits), q=2*FULL/L, out=[];
+    for(let k=-L/2;k<=L/2-1;k++)out.push((k+0.5)*q);
+    return out;
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,xTitle,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',title:{display:true,text:xTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chW=mkChart('chart-wave','時間（周期で正規化）','振幅');
+  const chE=mkChart('chart-err','時間（周期で正規化）','誤差');
+  const chS=mkChart('chart-snr','量子化ビット数 n','SN比 [dB]');
+
+  // ---- audio ----
+  let actx=null, src=null;
+  function stopTone(){try{if(src){src.stop();src=null;}}catch(e){}}
+  function playQuant(bits){
+    stopTone();
+    try{
+      if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();
+      if(actx.state==='suspended')actx.resume();
+      const sr=actx.sampleRate, dur=1.6, len=Math.floor(sr*dur);
+      const buf=actx.createBuffer(1,len,sr);
+      const d=buf.getChannelData(0);
+      const f=440;
+      for(let i=0;i<len;i++){
+        const x=Math.sin(2*Math.PI*f*i/sr);
+        d[i]=quantize(x,bits)*0.25;
+      }
+      src=actx.createBufferSource();
+      src.buffer=buf;
+      const g=actx.createGain();
+      g.gain.setValueAtTime(1,actx.currentTime);
+      g.gain.setValueAtTime(1,actx.currentTime+dur-0.1);
+      g.gain.linearRampToValueAtTime(0,actx.currentTime+dur);
+      src.connect(g);g.connect(actx.destination);
+      src.start();
+      src.onended=function(){src=null;};
+    }catch(e){}
+  }
+
+  function render(){
+    const b=parseInt(slB.value,10);
+    const L=Math.pow(2,b);
+    const q=2*FULL/L;
+    document.getElementById('val-b').textContent=String(b);
+    document.getElementById('s-levels').textContent=L.toLocaleString();
+    document.getElementById('s-step').textContent=nf(q,q<0.001?6:4);
+
+    // --- waveform & error ---
+    const sD=[],qD=[],eD=[],pD=[],mD=[];
+    let se=0,sm=0,emax=0;
+    for(let i=0;i<N;i++){
+      const t=i/N*2;                       // 2 周期ぶん
+      const x=Math.sin(2*Math.PI*t);
+      const y=quantize(x,b);
+      const e=y-x;
+      sD.push({x:t,y:x});qD.push({x:t,y:y});eD.push({x:t,y:e});
+      pD.push({x:t,y:q/2});mD.push({x:t,y:-q/2});
+      se+=e*e; sm+=x*x;
+      if(Math.abs(e)>emax)emax=Math.abs(e);
+    }
+    const erms=Math.sqrt(se/N);
+    const snr=10*Math.log10((sm/N)/(se/N));
+
+    document.getElementById('s-snr').textContent=nf(snr,1);
+
+    const w0=ds('#94a3b8',1.6);w0.data=sD;
+    const w1=ds('#4338ca',2.2);w1.data=qD;w1.stepped='middle';
+    const lvl=[];
+    if(L<=64){
+      levels(b).forEach(function(v){
+        const a=[{x:0,y:v},{x:2,y:v}];
+        const dd=ds('#e2e8f0',1,[3,3]);dd.data=a;lvl.push(dd);
+      });
+    }
+    chW.data.datasets=lvl.concat([w0,w1]);
+    chW.options.scales.x.min=0;chW.options.scales.x.max=2;
+    chW.options.scales.y.min=-1.2;chW.options.scales.y.max=1.2;
+    chW.update();
+
+    document.getElementById('wave-note').textContent=
+      (b<=4)?'段階数が少ないため、階段状の形がはっきり見えます。元の滑らかな波形とは大きく異なります。'
+            :((b<=8)?'階段がまだ見える程度です。段階数 '+L+' 段。'
+                    :'段階数 '+L.toLocaleString()+' 段となり、元の波形とほぼ区別がつきません。');
+
+    const e0=ds('#dc2626',1.6);e0.data=eD;
+    const e1=ds('#94a3b8',1.3,[5,4]);e1.data=pD;
+    const e2=ds('#94a3b8',1.3,[5,4]);e2.data=mD;
+    chE.data.datasets=[e1,e2,e0];
+    chE.options.scales.x.min=0;chE.options.scales.x.max=2;
+    chE.options.scales.y.min=-q*0.8;chE.options.scales.y.max=q*0.8;
+    chE.update();
+
+    document.getElementById('r-emax').textContent=nf(emax,6);
+    document.getElementById('r-emax-t').textContent=nf(q/2,6)+'（Δ/2）';
+    document.getElementById('r-erms').textContent=nf(erms,6);
+    document.getElementById('r-erms-t').textContent=nf(q/Math.sqrt(12),6)+'（Δ/√12）';
+
+    // --- SNR curve ---
+    const mD2=[],tD=[],cD=[];
+    for(let bb=1;bb<=16;bb++){
+      const qq=2*FULL/Math.pow(2,bb);
+      let s2=0,m2=0;
+      for(let i=0;i<N;i++){
+        const x=Math.sin(2*Math.PI*(i/N*2));
+        const y=quantize(x,bb);
+        s2+=(y-x)*(y-x); m2+=x*x;
+      }
+      mD2.push({x:bb,y:10*Math.log10(m2/s2)});
+      tD.push({x:bb,y:6.02*bb+1.76});
+    }
+    cD.push({x:b,y:-5});cD.push({x:b,y:105});
+    const q0=ds('#059669',2.4);q0.data=mD2;
+    const q1=ds('#2563eb',1.8,[6,4]);q1.data=tD;
+    const q2=ds('#dc2626',1.5,[4,3]);q2.data=cD;
+    chS.data.datasets=[q1,q0,q2];
+    chS.options.scales.x.min=1;chS.options.scales.x.max=16;
+    chS.options.scales.y.min=0;chS.options.scales.y.max=105;
+    chS.update();
+
+    document.getElementById('snr-eq').innerHTML=
+      'SNR ≈ 6.02 n + 1.76 [dB]　→　n = '+b+' のとき '+nf(6.02*b+1.76,2)+' dB（実測 '+nf(snr,2)+' dB）<br>'+
+      '<span style="color:#64748b;">1 bit 増やすごとに約 6 dB（振幅で約 2 倍）の改善</span>';
+
+    // --- 用途 ---
+    const uses={1:'1 bit：2段階のみ。音声の有無程度しか表せません',
+      2:'2 bit：4段階。波形の形はほとんど残りません',
+      3:'3 bit：8段階。階段がはっきり見えます',
+      4:'4 bit：16段階。初期の音声合成LSI程度',
+      6:'6 bit：64段階',
+      8:'8 bit：256段階。昔のゲーム機・電話の音声品質に相当',
+      10:'10 bit：1024段階。簡易な計測用A/D',
+      12:'12 bit：4096段階。一般的なマイコン内蔵A/D変換器',
+      14:'14 bit：16384段階',
+      16:'16 bit：65536段階。音楽CDの規格（SN比約 98 dB）'};
+    let u=uses[b];
+    if(!u){
+      u=b+' bit：'+L.toLocaleString()+'段階';
+      if(b>=13)u+='。高精度計測向け';
+    }
+    document.getElementById('use-box').textContent=u;
+  }
+
+  slB.addEventListener('input',render);
+  document.getElementById('b-quant').addEventListener('click',function(){playQuant(parseInt(slB.value,10));});
+  document.getElementById('b-orig').addEventListener('click',function(){playQuant(16);});
+  document.getElementById('b-stop').addEventListener('click',stopTone);
+
+  render();
+})();
+</script>
+</body>
+</html>
